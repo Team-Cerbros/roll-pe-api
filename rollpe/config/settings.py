@@ -84,12 +84,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        "OPTIONS": {
-            "read_default_file": "utils/db.cnf",
+        'NAME': return_env_value('DJANGO_DATABASE_NAME'),
+        'USER': return_env_value('DJANGO_DATABASE_USER'),
+        'PASSWORD': return_env_value('DJANGO_DATABASE_PASSWORD'),
+        'HOST': return_env_value('DJANGO_DATABASE_HOST'),
+        'PORT': return_env_value('DJANGO_DATABASE_PORT'),
+        'TEST': {
+            'NAME': 'test_' + return_env_value('DJANGO_DATABASE_NAME'),  # 테스트용 DB 이름
         },
-        # 'TEST': {
-        #     'NAME': 'test_' + env(''),  # 테스트용 DB 이름
-        # },
     }
 }
 
