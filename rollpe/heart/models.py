@@ -10,3 +10,4 @@ class Heart(BaseTimeModel):
 
 	class Meta:
 		verbose_name = 'heart'
+  

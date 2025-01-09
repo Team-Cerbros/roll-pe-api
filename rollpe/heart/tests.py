@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from django.utils.timezone import localtime
+from urllib.parse import urlencode
 
 from user.models import User
 from paper.models import Paper
@@ -63,7 +64,10 @@ class HeartAPITest(APITestCase):
         
         # API 요청
         url = reverse('heart_api')
-        response = self.client.get(url)
+        query_params = {'pid': self.rolling_paper.id}
+        url_with_params = f'{url}?{urlencode(query_params)}'
+        
+        response = self.client.get(url_with_params)
 
         # 예상 데이터
         expected_data = {
