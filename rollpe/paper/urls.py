@@ -2,8 +2,8 @@
 from django.contrib import admin
 from django.urls import path
 
-from paper.apis import PaperAPI
+from paper.apis import UserPaperAPI
 
 urlpatterns = [
-	path('test', PaperAPI.as_view(), name='test'),
+	path('', UserPaperAPI.as_view(), name='paper_api_for_user'),
 ]

@@ -6,6 +6,11 @@ class SystemCodeManager:
 			"link": None,
 			"message": "정상 처리되었습니다."
 			},
+		201: {
+			"code": "SUCCESS",
+			"link": None,
+			"message": "정상적으로 생성되었습니다."
+			},
 		400: {
 			"code": "CLIENT ERROR",
 			"link": None,
@@ -16,7 +21,11 @@ class SystemCodeManager:
 			"link": "/login",
 			"message": "로그인이 필요합니다."
 			},
-		
+		403: {
+			"code": "FORBIDDEN",
+			"link": "/login",
+			"message": "로그인이 필요합니다."
+			},
 		404: {
 			"code": "NOT_FOUND",
 			"link": None,

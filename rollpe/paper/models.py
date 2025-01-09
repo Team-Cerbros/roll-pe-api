@@ -9,14 +9,16 @@ from user.models import BaseTimeModel
 class Paper(BaseTimeModel):
 	hostFK = models.ForeignKey(
      'user.User',
-     on_delete=models.DO_NOTHING,
-     related_name='paper_host'
+	    on_delete=models.DO_NOTHING,
+	    related_name='paper_host'
 	)
 
-	receiverFk = models.ForeignKey(
+	receiverFK = models.ForeignKey(
      'user.User', 
-     on_delete=models.DO_NOTHING,
-     related_name='paper_receiver'
+		on_delete=models.DO_NOTHING,
+		related_name='paper_receiver',
+		null=True,
+		blank=True
 	)
 
 	receiverName = models.CharField(max_length=15, null=True, blank=True)
