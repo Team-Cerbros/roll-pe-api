@@ -40,6 +40,8 @@ class User(AbstractBaseUser, PermissionsMixin, BaseTimeModel):
     
     birth = models.CharField(
         max_length=6,
+        null=True,
+        blank=True
     )
     
     sex = models.BooleanField(
