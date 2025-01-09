@@ -7,19 +7,20 @@ class SystemCodeManager:
 			"message": "정상 처리되었습니다."
 			},
 		400: {
-			"code": "NOT_FOUND",
+			"code": "CLIENT ERROR",
 			"link": None,
-			"message": "요청하신 리소스를 찾을 수 없습니다."
+			"message": "오류가 발생했습니다."
 			},
 		401: {
 			"code": "UNAUTHORIZED",
 			"link": "/login",
 			"message": "로그인이 필요합니다."
 			},
+		
 		404: {
-			"code": "ERROR",
+			"code": "NOT_FOUND",
 			"link": None,
-			"message": "오류가 발생했습니다."
+			"message": "요청하신 리소스를 찾을 수 없습니다."
 			},
 		}
 
