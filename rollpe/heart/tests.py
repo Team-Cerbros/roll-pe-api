@@ -3,6 +3,7 @@ from rest_framework import status
 from django.urls import reverse
 from django.utils.timezone import localtime
 from urllib.parse import urlencode
+from pprint import pprint
 
 from user.models import User
 from paper.models import Paper
@@ -55,6 +56,8 @@ class HeartAPITest(APITestCase):
             context='테스트2 마음입니다.'
         )
         
+        cls.url = reverse('heart_api')
+        
         
     def test_get_heart_list(self):
         """
@@ -63,9 +66,8 @@ class HeartAPITest(APITestCase):
         self.maxDiff = None
         
         # API 요청
-        url = reverse('heart_api')
-        query_params = {'pid': self.rolling_paper.id}
-        url_with_params = f'{url}?{urlencode(query_params)}'
+        pcode = {'pcode': self.rolling_paper.code}
+        url_with_params = f'{self.url}?{urlencode(pcode)}'
         
         response = self.client.get(url_with_params)
 
@@ -106,3 +108,34 @@ class HeartAPITest(APITestCase):
         # 응답 데이터 비교
         self.assertDictEqual(response.json(), expected_data, '응답 형식이 올바르지 않습니다.')
         
+        
+    def test_get_heart_detail(self):
+        """
+            마음 상세정보를 가져올 수 있어야 한다.
+        """
+        pcode = {'pcode': self.rolling_paper.code}
+        hcode = {'hcode': self.heart1.code}
+        url_with_params = f'{self.url}?{urlencode(pcode)}?{urlencode(hcode)}'
+        
+        response = self.client.get(url_with_params)
+        
+        expected_data = {
+            'status_code' : status.HTTP_200_OK,
+            'message' : '정상 처리되었습니다.',
+            'code' : 'SUCCESS',
+            'link' : None,
+            'data' : {
+                'id': self.heart1.id,
+                'userName': self.heart1.userFK.name,
+                'rollingPaperName': self.heart1.paperFK.title,
+                'context': self.heart1.context,
+                'danger': 0,
+                'createdAt': localtime(self.heart2.createdAt).strftime('%Y.%m.%d')
+            }
+        }
+
+        # 응답 상태 코드 확인
+        self.assertEqual(response.status_code, status.HTTP_200_OK, '상태코드가 올바르지 않습니다.')
+        
+        # 응답 데이터 비교
+        self.assertDictEqual(response.json(), expected_data, '응답 형식이 올바르지 않습니다.')
