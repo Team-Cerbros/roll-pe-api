@@ -50,7 +50,7 @@ class HeartAPI(APIView):
                 return Response(status=404)
             
             paginator = self.pagination_class()
-            queryset = Heart.objects.filter(paperFK__code=pcode).all().order_by('-createdAt')
+            queryset = Heart.objects.filter(paperFK__code=pcode).all().order_by('createdAt')
             
             page = paginator.paginate_queryset(queryset, request)
             serializer = HeartSerializer(page, many=True)
