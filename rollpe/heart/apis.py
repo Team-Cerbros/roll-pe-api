@@ -7,7 +7,7 @@ import uuid
 from utils.response import Response
 from paper.models import Paper
 from heart.models import Heart
-from heart.serializers import HeartSerializer
+from heart.serializers import HeartSerializer, HeartWriteSerializer
 
 
 def is_valid_uuid(value):
@@ -21,8 +21,11 @@ def is_valid_uuid(value):
 
 
 class HeartAPI(APIView):
+    """
+        * 추가 작업 필요 상황
+        비공개면 초대받지 못한 유저의 경우 조회할 수 없도록 제어 필요
+    """
     pagination_class = PageNumberPagination
-    
     def get(self, request):
         """
             pcode가 queryparameter에 없거나,
@@ -60,4 +63,19 @@ class HeartAPI(APIView):
                 status=200
             )
             
+    
+    def post(self, request):
+        """
+            * 추가 작업 필요 상황
+            이미 작성했으면 못작성하도록 제어 필요
+            비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
+        """
+        serializer = HeartWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            print(serializer.errors)
+            return Response(status=400)
+        heart_instance = serializer.create(serializer.validated_data)
+        return Response(status=201)
+        
+        
         

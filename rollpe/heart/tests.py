@@ -139,7 +139,22 @@ class HeartAPITest(APITestCase):
         self.assertDictEqual(response.json(), expected_data, '응답 형식이 올바르지 않습니다.')
         
         
-
+    def test_get_heart_without_authenticated(self):
+        """
+            로그인하지 않은 유저는 마음을 조회할 수 없다.
+            일단 보류 유저쪽 완성 안됌
+        """
+        pass
+    
+    def test_get_heart_without_invited(self):
+        """
+            초대 받지 않은 유저는 마음을 조회할 수 없다.
+        """
+        pass
+    
+    
+    
+        
 
 class HeartWriteAPITest(APITestCase):
     @classmethod
@@ -192,4 +207,23 @@ class HeartWriteAPITest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, '상태코드가 올바르지 않습니다.')
         self.assertDictEqual(response.json(), expected_data, '응답 형식이 올바르지 않습니다.')
-        
+    
+    
+    def test_create_heart_without_authenticated(self):
+        """
+            로그인하지 않은 유저는 마음을 작성할 수 없다.
+            일단 보류 유저쪽 완성 안됌
+        """
+        pass
+    
+    def test_create_heart_without_invited(self):
+        """
+            초대 받지 않은 유저는 마음을 작성할 수 없다.
+        """
+        pass
+    
+    def test_create_heart_duplicate(self):
+        """
+            이미 마음을 작성한 유저는 재작성할 수 없다.
+        """
+        pass
