@@ -11,6 +11,11 @@ class SystemCodeManager:
 			"link": None,
 			"message": "정상적으로 생성되었습니다."
 			},
+		204: {
+			"code": "NO_CONTENT",
+			"link": None,
+			"message": "정상적으로 삭제되었습니다."
+			},
 		400: {
 			"code": "CLIENT ERROR",
 			"link": None,
@@ -30,6 +35,17 @@ class SystemCodeManager:
 			"code": "NOT_FOUND",
 			"link": None,
 			"message": "요청하신 리소스를 찾을 수 없습니다."
+			},
+		# Paper Custom Response
+		470: {
+			"code": "CANCELLED_YOUR_NOT_HOST",
+			"link": None,
+			"message": "삭제할 수 있는 권한이 없습니다."
+			},
+		471: {
+			"code": "CANCELLED_YOUR_NOT_INVITED",
+			"link": None,
+			"message": "초대된 유저가 아닙니다."
 			},
 		}
 
