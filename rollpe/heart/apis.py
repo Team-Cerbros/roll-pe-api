@@ -33,3 +33,5 @@ class HeartAPI(APIView):
 			data=paginator.get_paginated_response(serializer.data).data,
 			status=status.HTTP_200_OK
         )
+        
+        
