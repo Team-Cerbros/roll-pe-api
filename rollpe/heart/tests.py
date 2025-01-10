@@ -113,9 +113,8 @@ class HeartAPITest(APITestCase):
         """
             마음 상세정보를 가져올 수 있어야 한다.
         """
-        pcode = {'pcode': self.rolling_paper.code}
         hcode = {'hcode': self.heart1.code}
-        url_with_params = f'{self.url}?{urlencode(pcode)}?{urlencode(hcode)}'
+        url_with_params = f'{self.url}?{urlencode(hcode)}'
         
         response = self.client.get(url_with_params)
         
