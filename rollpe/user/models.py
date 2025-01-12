@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 
@@ -63,6 +64,12 @@ class User(AbstractBaseUser, PermissionsMixin, BaseTimeModel):
     is_active = models.BooleanField(
         # django에서 필요한 필드
         default=True
+    )
+    code = models.UUIDField(
+        # uuid 필드
+        default=uuid.uuid4, 
+        editable=True,
+        null=True
     )
     
     objects = UserManager()
