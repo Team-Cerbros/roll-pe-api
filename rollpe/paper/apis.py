@@ -40,6 +40,17 @@ class UserPaperAPI(APIView):
 		return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
-def delete_paper(request):
-	user = User.objects.get(id=request.user.id)
+	def delete(self, request):
+		user = User.objects.get(pk=request.user.id)
+		paper = Paper.objects.get(pk=request.data['id'])
+
+		if paper.hostFK == user:
+			paper.delete()
+			return Response(status=status.HTTP_204_NO_CONTENT)
+		else:
+			if paper.invitingUser.filter(pk=user.pk).exists():
+				return Response(status=470)
+			else:
+				return Response(status=471)
+
+
