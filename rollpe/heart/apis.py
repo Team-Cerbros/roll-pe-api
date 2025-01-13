@@ -70,12 +70,21 @@ class HeartAPI(APIView):
             이미 작성했으면 못작성하도록 제어 필요
             비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
         """
-        serializer = HeartWriteSerializer(data=request.data)
+        serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
-            print(serializer.errors)
             return Response(status=400)
         heart_instance = serializer.create(serializer.validated_data)
         return Response(status=201)
-        
-        
+    
+    
+    def patch(self, request):
+        """
+            본인이 작성한 게시물이 맞는지, 초대받은 유저가 맞는지 검증 필요
+            로그인 구현되면 코드 추가할 것
+        """
+        serializer = HeartWriteSerializer(data=request.data, method='patch')
+        if not serializer.is_valid():
+            return Response(status=400)
+        heart_instance = serializer.update(serializer.validated_data)
+        return Response(status=200)
         
