@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     # Custom APP
     'user',
     'paper',
@@ -141,6 +142,9 @@ APPEND_SLASH = False
 # DRF Settings
 # settings.py
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
     'DEFAULT_RESPONSE_CLASS': 'utils.response.CustomResponse',
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -148,3 +152,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 2,
     }
+
+# JWT Config
+# SIMPLE_JWT = {
+#    'ACCESS_TOKEN_LIFETIME': 
+#    'REFRESH_TOKEN_LIFETIME': 
+# }
