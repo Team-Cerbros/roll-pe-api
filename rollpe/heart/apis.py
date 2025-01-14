@@ -5,9 +5,11 @@ from rest_framework.pagination import PageNumberPagination
 import uuid
 
 from utils.response import Response
+from utils.share.functions import is_only_invited_user, is_host
 from paper.models import Paper
 from heart.models import Heart
 from heart.serializers import HeartSerializer, HeartWriteSerializer
+
 
 
 def is_valid_uuid(value):
@@ -60,7 +62,7 @@ class HeartAPI(APIView):
             paper_instance = base_query.get()
             
             # 비공개 롤링페이퍼일 경우 초대된 유저인지 검증
-            if not paper_instance.viewStat and not paper_instance.invitingUser.filter(pk=request.user.id).exists():
+            if not paper_instance.viewStat and not is_only_invited_user(request.user, paper_instance):
                 return Response(status=471)
             
             paginator = self.pagination_class()
@@ -82,14 +84,36 @@ class HeartAPI(APIView):
             비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
         """
         
+        # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
         
-        
+        # serialzier 검증
         serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
-            return Response(status=400)
-        heart_instance = serializer.create(serializer.validated_data)
+            return Response(status=480)
+        
+        validated_data = serializer.validated_data
+        
+        base_query = Paper.objects.filter(pk=validated_data['paperFK'])
+        paper_instance = base_query.get()
+        
+        # 존재하는 Paper인지 검증
+        if not base_query.exists():
+            return Response(status=404)
+        
+        # 중복 작성 검증
+        if Heart.objects.filter(userFK=request.user.id, paperFK=paper_instance.id).exists():
+            return Response(status=482)
+        
+        if not paper_instance.viewStat:
+            # 비공개 롤링페이퍼일 경우만 검증
+            if not is_only_invited_user(request.user, paper_instance):
+                return Response(status=471)
+            
+        validated_data['userFK'] = request.user.id
+        heart_instance = serializer.create(validated_data)
+        
         return Response(status=201)
     
     

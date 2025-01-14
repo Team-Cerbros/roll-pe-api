@@ -21,9 +21,9 @@ class HeartWriteSerializer(serializers.ModelSerializer):
         self.method = kwargs.pop('method', 'post')
         super().__init__(*args, **kwargs)
         
-        self.fields['userFK'] = serializers.IntegerField()
         self.fields['paperFK'] = serializers.IntegerField()
         self.fields['context'] = serializers.CharField()
+        self.fields['index'] = serializers.IntegerField()
         
         if self.method == 'patch': 
             self.fields['hcode'] = serializers.CharField()            
@@ -32,19 +32,17 @@ class HeartWriteSerializer(serializers.ModelSerializer):
         model = Heart
         fields = ()
         
+        
     def create(self, validated_data):
         
-        user_id = validated_data['userFK']
-        paper_id = validated_data['paperFK']
-        context = validated_data['context']
-        
         heart_instance = Heart.objects.create(
-            userFK=User.objects.get(pk=user_id),
-            paperFK=Paper.objects.get(pk=paper_id),
-            context=context
+            userFK=User.objects.get(pk=validated_data['userFK']),
+            paperFK=Paper.objects.get(pk=validated_data['paperFK']),
+            context=validated_data['context'],
+            index=validated_data['index']
         )
-        
         return heart_instance
+    
     
     def update(self, validated_data):
         
