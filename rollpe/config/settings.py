@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 
 from utils.env import return_env_value
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     # Custom APP
     'user',
     'paper',
@@ -154,7 +156,11 @@ REST_FRAMEWORK = {
     }
 
 # JWT Config
-# SIMPLE_JWT = {
-#    'ACCESS_TOKEN_LIFETIME': 
-#    'REFRESH_TOKEN_LIFETIME': 
-# }
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),  # 2시간
+    'REFRESH_TOKEN_LIFETIME': timedelta(weeks=2),  # 2주
+    # True로 설정할 경우, refresh token을 보내면 새로운 access token과 refresh token이 반환된다.
+    "ROTATE_REFRESH_TOKENS": True,
+    # True로 설정될 경우, 기존에 있던 refresh token은 blacklist가된다.
+    "BLACKLIST_AFTER_ROTATION": True,
+}
