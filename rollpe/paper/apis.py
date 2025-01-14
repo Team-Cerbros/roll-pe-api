@@ -1,12 +1,14 @@
+from django.contrib.auth.handlers.modwsgi import check_password
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 
-from paper.serializer import UserShowPaperSerializer, PaperCreateSerializer
+from paper.serializer import UserShowPaperSerializer, PaperCreateSerializer, PaperSerializer
 from user.models import User
 from utils.response import Response
 from rest_framework.views import APIView
 
+from utils.share.functions import is_invited_user
 from .models import Paper
 
 
@@ -42,7 +44,7 @@ class UserPaperAPI(APIView):
 
 	def delete(self, request):
 		user = User.objects.get(pk=request.user.id)
-		paper = Paper.objects.get(pk=request.data['id'])
+		paper = Paper.objects.get(code=request.data['pcode'])
 
 		if paper.hostFK == user:
 			paper.delete()
@@ -52,5 +54,54 @@ class UserPaperAPI(APIView):
 				return Response(status=470)
 			else:
 				return Response(status=471)
+
+
+
+class PaperAPI(APIView):
+	def get(self, request):
+		pcode = request.query_params.get('pcode', None)
+
+		if pcode is None:
+			return Response(status=status.HTTP_400_BAD_REQUEST)
+
+		user = User.objects.get(pk=request.user.id)
+		paper = Paper.objects.get(code=pcode)
+		response = PaperSerializer(paper).data
+
+		if is_invited_user(user, paper):
+			return Response(
+				data=response,
+				status=status.HTTP_200_OK
+				)
+		else:
+			return Response(status=471)
+
+	def post(self, request):
+		serializer = PaperCreateSerializer(data=request.data)
+		if serializer.is_valid():
+			paper = serializer.save()
+			return Response(
+				data=PaperCreateSerializer(paper).data,
+				status=status.HTTP_201_CREATED
+				)
+		return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class PaperInviteManageAPI(APIView):
+	def post(self, request):
+		pcode = request.data.get('pcode', None)
+
+		if pcode is None:
+			return Response(status=status.HTTP_400_BAD_REQUEST)
+		user = User.objects.get(pk=request.user.id)
+		paper = Paper.objects.get(code=pcode, hostFK=user)
+
+		if check_password(request.data['password'], paper.password):
+			paper.invitingUser.add(user)
+			return Response(status=status.HTTP_204_NO_CONTENT)
+		else:
+			return Response(status=472)
 
 

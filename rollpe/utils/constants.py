@@ -47,6 +47,11 @@ class SystemCodeManager:
 			"link": None,
 			"message": "초대된 유저가 아닙니다."
 			},
+		472: {
+			"code": "PASSWORD_IS_NOT_CORRECT",
+			"link": None,
+			"message": "비밀번호가 틀립니다."
+			},
 		# Heart
   		480: {
 			"code": "CANCELLED_YOUR_NOT_WRITER",

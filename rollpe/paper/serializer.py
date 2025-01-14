@@ -7,7 +7,7 @@ class UserShowPaperSerializer(serializers.ModelSerializer):
 	hostName = serializers.SerializerMethodField()
 	class Meta:
 		model = Paper
-		fields = ["id", "title", "viewStat", "receivingStat", "receivingDate", "hostName"]
+		fields = ["id", "title", "viewStat", "receivingStat", "receivingDate", "hostName", "code"]
 	def get_hostName(self, paper):
 		return paper.hostFK.name
 
@@ -41,3 +41,9 @@ class PaperCreateSerializer(serializers.ModelSerializer):
 				"수신자 정보를 위해 receiverFK 또는 receiverName, receiverTel 중 최소 하나는 반드시 전달되어야 합니다."
 				)
 		return attrs
+
+
+class PaperSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = Paper
+		exclude = ('id', 'updatedAt', 'password')
