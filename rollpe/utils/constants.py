@@ -47,6 +47,12 @@ class SystemCodeManager:
 			"link": None,
 			"message": "초대된 유저가 아닙니다."
 			},
+		# Heart
+  		480: {
+			"code": "CANCELLED_YOUR_NOT_WRITER",
+			"link": None,
+			"message": "수정 및 삭제할 수 있는 권한이 없습니다."
+			},
 		}
 
 	@classmethod
