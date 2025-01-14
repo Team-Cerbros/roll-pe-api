@@ -31,6 +31,9 @@ class HeartAPI(APIView):
             pcode가 queryparameter에 없거나,
             존재하지 않는 롤링페이퍼일 경우 404 처리
         """
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        
         pcode = request.GET.get('pcode')
         hcode = request.GET.get('hcode')
         
@@ -49,8 +52,16 @@ class HeartAPI(APIView):
             )
         else:
             # 목록 가져오기
-            if not pcode or not is_valid_uuid(pcode) or not Paper.objects.filter(code=pcode).exists():
+            base_query = Paper.objects.filter(code=pcode)
+            
+            if not pcode or not is_valid_uuid(pcode) or not base_query.exists():
                 return Response(status=404)
+            
+            paper_instance = base_query.get()
+            
+            # 비공개 롤링페이퍼일 경우 초대된 유저인지 검증
+            if not paper_instance.viewStat and not paper_instance.invitingUser.filter(pk=request.user.id).exists():
+                return Response(status=471)
             
             paginator = self.pagination_class()
             queryset = Heart.objects.filter(paperFK__code=pcode).all().order_by('createdAt')
@@ -70,6 +81,11 @@ class HeartAPI(APIView):
             이미 작성했으면 못작성하도록 제어 필요
             비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
         """
+        
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        
+        
         serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
             return Response(status=400)
@@ -77,14 +93,20 @@ class HeartAPI(APIView):
         return Response(status=201)
     
     
+    
     def patch(self, request):
         """
             본인이 작성한 게시물이 맞는지, 초대받은 유저가 맞는지 검증 필요
             로그인 구현되면 코드 추가할 것
         """
+        
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        
         serializer = HeartWriteSerializer(data=request.data, method='patch')
         if not serializer.is_valid():
             return Response(status=400)
         heart_instance = serializer.update(serializer.validated_data)
         return Response(status=200)
-        
+
+
