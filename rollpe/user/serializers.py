@@ -17,7 +17,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # 이메일 존재 여부 확인
         if not User.objects.filter(email=email).exists():
             return Response(
-                data={"error": "사용자를 찾을 수 없습니다."},
+                data={"message": "사용자를 찾을 수 없습니다."},
                 status=400
             )
 
@@ -25,7 +25,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = authenticate(email=email, password=password)
         if user is None:
             return Response(
-                data={"error": "비밀번호가 틀렸습니다."},
+                data={"message": "비밀번호가 틀렸습니다."},
                 status=400
             )
 
@@ -50,7 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User.objects.create(**validated_data)
         user.set_password(password)
-        
+        user.is_active = False # 이메일 인증용 코드
         user.save()
         
         return user
