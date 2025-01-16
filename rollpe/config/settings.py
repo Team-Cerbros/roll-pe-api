@@ -164,3 +164,28 @@ SIMPLE_JWT = {
     # True로 설정될 경우, 기존에 있던 refresh token은 blacklist가된다.
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# Cache Config
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-suffix',
+        # 'TIMEOUT': 300,
+        # 'OPTIONS': {
+        #     'MAX_ENTRIES': 1000,
+        # },
+        'TEST': {  # 테스트 환경 전용 설정
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'test-cache',
+        },
+    }
+}
+
+# Emial Config
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = return_env_value('EMAIL_USER')
+EMAIL_HOST_PASSWORD = return_env_value('EMAIL_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

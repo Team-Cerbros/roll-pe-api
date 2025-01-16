@@ -2,35 +2,120 @@ from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
+from django.core import mail
+from user.models import User
+import jwt
+from django.conf import settings
+from django.core.cache import cache
 
-
-# Create your tests here.
-class SignupTestCase(APITestCase):
-
+### 회원가입 이메일 인증용 test
+class EmailVerificationTest(APITestCase):
     def setUp(self):
-        self.signup_url = reverse('signup')
-        self.data = {
-            "name": "testuser",
-            "email": "test@test.com",
+
+        # 각 테스트 전에 캐시 초기화
+        cache.clear()
+
+        self.signup_url = reverse('signup')  # 회원가입 URL
+        self.verify_email_url = reverse('verify_email')  # 이메일 인증 URL
+        self.user_data = {
+            "name": "testuser123",
+            "email": "test123@test.com",
             "password": "testpassword",
             "sex": 1,
             "birth": "000101",
             "phoneNumber": "01012345678"
         }
 
-    """회원가입 성공 Test"""
-    def test_signup_success(self):
-        response = self.client.post(self.signup_url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # 회원가입 
+        self.signup_response = self.client.post(self.signup_url, self.user_data, format='json')
 
-    """잘못된 이메일 형식으로 회원가입 시도 test"""
-    def test_signup_with_invalid_email(self):
-        self.data['email'] = 'invalid-email'
-        response = self.client.post(self.signup_url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_signup_sends_email_with_token(self):
+        """
+        회원가입 시 이메일 인증 링크가 전송되는지 테스트
+        """
 
-    """중복된 이메일로 회원가입 test"""
-    def test_signup_with_duplicate_email(self):
-        self.client.post(self.signup_url,self.data, format='json')
-        response = self.client.post(self.signup_url, self.data, format='json')
+        # 응답 코드 확인
+        self.assertEqual(self.signup_response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("message", self.signup_response.data.get('data'))
+        self.assertEqual(self.signup_response.data.get('data').get('message'), "회원가입이 완료되었습니다. 이메일을 확인해주세요.")
+
+        # 이메일 발송 여부 확인
+        self.assertEqual(len(mail.outbox), 1)  # 이메일 한 건이 발송되었는지 확인
+        email = mail.outbox[0]
+        self.assertEqual(email.to, [self.user_data["email"]])
+
+        # 이메일 본문에서 토큰 추출
+        token_start_index = email.body.find("token=") + len("token=")
+        self.token = email.body[token_start_index:].strip()  # 이메일 본문에서 토큰 추출
+        self.assertTrue(self.token, "Token not found in email body")
+
+    def test_verify_email_with_valid_token(self):
+        """
+        유효한 토큰으로 이메일 인증 성공 여부 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 이메일 인증 요청
+        response = self.client.get(f"{self.verify_email_url}?token={token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('data').get('message'), "이메일 인증이 완료되었습니다.")
+
+        # 사용자 인증 여부 확인
+        user = User.objects.get(email=self.user_data["email"])
+        self.assertTrue(user.is_active)
+
+    def test_verify_email_with_invalid_token(self):
+        """
+        잘못된 토큰으로 이메일 인증 실패 여부 테스트
+        """
+
+        # 잘못된 토큰으로 요청
+        invalid_token = jwt.encode({"email": self.user_data.get('email')}, "wrong_secret", algorithm="HS256")
+        response = self.client.get(f"{self.verify_email_url}?token={invalid_token}")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('data').get('message'), "유효하지 않은 토큰입니다.")
+
+    def test_verify_email_with_expired_token(self):
+        """
+        만료된 토큰으로 이메일 인증 실패 여부 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 만료된 토큰 생성 (exp를 과거로 설정)
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        expired_token = jwt.encode(
+            {**payload, "exp": 0},  # 만료 시간 0으로 설정
+            settings.SECRET_KEY,
+            algorithm="HS256"
+        )
+
+        # 만료된 토큰으로 요청
+        response = self.client.get(f"{self.verify_email_url}?token={expired_token}")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('data').get('message'), "토큰이 만료되었습니다.")
+    
+    def test_verify_email_with_used_token(self):
+        """
+        이미 사용한 토큰으로 이메일 인증 실패 여부 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 같은 토큰으로 2번 요청
+        self.client.get(f"{self.verify_email_url}?token={token}") # 성공
+        response = self.client.get(f"{self.verify_email_url}?token={token}") # 실패
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('data').get('message'), "이미 사용된 토큰입니다.")
+
+

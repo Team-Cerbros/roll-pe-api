@@ -18,7 +18,8 @@ class LogoutAPITest(APITestCase):
             "password": "testpassword",
             "sex": 1,
             "birth": "000101",
-            "phoneNumber": "01012345678"
+            "phoneNumber": "01012345678",
+            "is_test":True
         }
         self.client.post(self.signup_url, self.sign_up_data, format='json')
 
