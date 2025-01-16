@@ -20,7 +20,13 @@ class Heart(BaseTimeModel):
 	danger = models.IntegerField(
 		default=0
 	)
-	context = models.TextField()
+	context = models.TextField(
+		
+	)
+	index = models.IntegerField(
+		null=True,
+		blank=True
+	)
  
 	class Meta:
 		verbose_name = 'heart'

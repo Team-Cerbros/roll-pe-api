@@ -52,11 +52,21 @@ class SystemCodeManager:
 			"link": None,
 			"message": "비밀번호가 틀립니다."
 			},
-		# Heart
-  		480: {
+		# Heart Custom Response
+		480: {
+			"code": "SERIALIZER ERROR",
+			"link": None,
+			"message": "입력 데이터가 올바르지 않습니다."
+			},
+  		481: {
 			"code": "CANCELLED_YOUR_NOT_WRITER",
 			"link": None,
 			"message": "수정 및 삭제할 수 있는 권한이 없습니다."
+			},
+  		482: {
+			"code": "DUPLICATE_CREATION_NOT_ALLOWED",
+			"link": None,
+			"message": "해당 롤링페이퍼에 이미 마음을 작성하셨습니다."
 			},
 		}
 
