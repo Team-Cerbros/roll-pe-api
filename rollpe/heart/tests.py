@@ -11,53 +11,19 @@ from paper.models import Paper
 from heart.models import Heart
 
 
-"""
-    마음 조회 시나리오
-    
-    - 공통
-    1. 로그인 x => 마음목록 조회 불가능
-    
-    - 공개 롤링 페이퍼 => 
-        2. 로그인 o => 조회 가능
-        
-    - 비공개 롤링 페이퍼 =>
-        3. 로그인 o, 초대된 유저 x => 조회 불가능
-        4. 로그인 o, 초대된 유저 o => 조회 가능
-        
-        
-    - 인덱스 , 블러처리 필요
-
-"""
-class HeartReadAPITest(APITestCase):
+class BaseTestSetup(APITestCase):
     @classmethod
     def create_test_users(cls):
         """테스트 유저 생성"""
-        cls.receiver = User.objects.create(
-            name='receiver',
-            email='receiver@gmail.com',
-        )
-        cls.host = User.objects.create(
-            name='host',
-            email='host@gmail.com',
-        )
-        cls.user1 = User.objects.create(
-            name='test_user1',
-            email='testuser1@gmail.com',
-        )
-        cls.user2 = User.objects.create(
-            name='test_user2',
-            email='testuser2@gmail.com',
-        )
-        cls.user3 = User.objects.create(
-            name='test_user3',
-            email='testuser3@gmail.com',
-        )
-        cls.user1.set_password('1234')
-        cls.user1.save()
-        cls.user2.set_password('1234')
-        cls.user2.save()
-        cls.user3.set_password('1234')
-        cls.user3.save()
+        cls.receiver = User.objects.create(name='receiver', email='receiver@gmail.com')
+        cls.host = User.objects.create(name='host', email='host@gmail.com')
+        cls.user1 = User.objects.create(name='test_user1', email='testuser1@gmail.com')
+        cls.user2 = User.objects.create(name='test_user2', email='testuser2@gmail.com')
+        cls.user3 = User.objects.create(name='test_user3', email='testuser3@gmail.com')
+
+        for user in [cls.user1, cls.user2, cls.user3]:
+            user.set_password('1234')
+            user.save()
 
     @classmethod
     def create_test_data(cls):
@@ -87,40 +53,13 @@ class HeartReadAPITest(APITestCase):
         cls.private_rolling_paper.invitingUser.add(cls.user1, cls.user3)
         cls.private_rolling_paper.save()
         
-        # 테스트 마음 생성
-        cls.heart1 = Heart.objects.create(
-            userFK=cls.user1,
-            paperFK=cls.public_rolling_paper,
-            context='공개 롤링페이퍼의 테스트 마음1 입니다.',
-            index=1
-        )
-        cls.heart2 = Heart.objects.create(
-            userFK=cls.user2,
-            paperFK=cls.public_rolling_paper,
-            context='공개 롤링페이퍼의 테스트 마음2 입니다.',
-            index=3
-        )
-        cls.heart3 = Heart.objects.create(
-            userFK=cls.user1,
-            paperFK=cls.private_rolling_paper,
-            context='비공개 롤링페이퍼의 테스트 마음1 입니다.',
-            index=5
-        )
-        cls.heart4 = Heart.objects.create(
-            userFK=cls.user3,
-            paperFK=cls.private_rolling_paper,
-            context='비공개 롤링페이퍼의 테스트 마음2 입니다.',
-            index=4
-        )
-
     @classmethod
     def setUpTestData(cls):
         """테스트 데이터 생성"""
-        cls.create_test_users()
+        cls.create_test_users() 
         cls.create_test_data()
-        cls.url = reverse('heart_api')
-        
-        
+        cls.api_url = reverse('heart_api')
+
     def signin(self, user):
         """
             테스트유저 로그인
@@ -140,22 +79,54 @@ class HeartReadAPITest(APITestCase):
         
         # 인증 헤더 설정
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        
+        
+        
+class HeartReadAPITest(BaseTestSetup):
+    @classmethod
+    def setUpTestData(cls):
+        """HeartReadAPITest 전용 데이터 생성"""
+        super().setUpTestData()
+        
+        # 테스트 마음 생성
+        cls.heart1 = Heart.objects.create(
+            userFK=cls.user1,
+            paperFK=cls.public_rolling_paper,
+            context='공개 롤링페이퍼의 테스트 마음1 입니다.',
+            location=1
+        )
+        cls.heart2 = Heart.objects.create(
+            userFK=cls.user2,
+            paperFK=cls.public_rolling_paper,
+            context='공개 롤링페이퍼의 테스트 마음2 입니다.',
+            location=3
+        )
+        cls.heart3 = Heart.objects.create(
+            userFK=cls.user1,
+            paperFK=cls.private_rolling_paper,
+            context='비공개 롤링페이퍼의 테스트 마음1 입니다.',
+            location=5
+        )
+        cls.heart4 = Heart.objects.create(
+            userFK=cls.user3,
+            paperFK=cls.private_rolling_paper,
+            context='비공개 롤링페이퍼의 테스트 마음2 입니다.',
+            location=4
+        )
+
     
-    
-    # 1번 시나리오
     def test_get_heart_without_authenticated(self):
         """
             로그인하지 않은 유저는 마음을 조회할 수 없다.
         """
         pcode = {'pcode': self.public_rolling_paper.code}
-        url_with_params = f'{self.url}?{urlencode(pcode)}'
+        url_with_params = f'{self.api_url}?{urlencode(pcode)}'
         response = self.client.get(url_with_params)
         
         # 응답 상태 코드 확인
         self.assertEqual(response.status_code, 401, '상태코드가 올바르지 않습니다.')
     
     
-    # 2번 시나리오
     def test_get_public_heart_list(self):
         """
             공개 롤링페이퍼에 작성된 마음목록을 가져올 수 있어야 한다.
@@ -164,7 +135,7 @@ class HeartReadAPITest(APITestCase):
         
         # API 요청
         pcode = {'pcode': self.public_rolling_paper.code}
-        url_with_params = f'{self.url}?{urlencode(pcode)}'
+        url_with_params = f'{self.api_url}?{urlencode(pcode)}'
         
         response = self.client.get(url_with_params)
 
@@ -177,7 +148,7 @@ class HeartReadAPITest(APITestCase):
                 'context': self.heart1.context,
                 'danger': self.heart1.danger,
                 'createdAt': localtime(self.heart2.createdAt).strftime('%Y.%m.%d'),
-                'index': self.heart1.index,
+                'location': self.heart1.location,
                 'code': str(self.heart1.code),
                 'blur': False
             },
@@ -188,7 +159,7 @@ class HeartReadAPITest(APITestCase):
                 'context': self.heart2.context,
                 'danger': self.heart2.danger,
                 'createdAt': localtime(self.heart1.createdAt).strftime('%Y.%m.%d'),
-                'index': self.heart2.index,
+                'location': self.heart2.location,
                 'code': str(self.heart2.code),
                 'blur': False,
             }
@@ -201,7 +172,6 @@ class HeartReadAPITest(APITestCase):
         self.assertListEqual(response.json()['data']['results'], expected_data, '응답 데이터가 올바르지 않습니다.')
         
     
-    # 3번 시나리오
     def test_get_private_heart_list_without_invited(self):
         """
             비공개 롤링페이퍼에 작성된 마음목록을 초대되지 않은 유저는 조회할 수 없다.
@@ -210,7 +180,7 @@ class HeartReadAPITest(APITestCase):
 
         # API 요청
         pcode = {'pcode': self.private_rolling_paper.code}
-        url_with_params = f'{self.url}?{urlencode(pcode)}'
+        url_with_params = f'{self.api_url}?{urlencode(pcode)}'
         
         response = self.client.get(url_with_params)
        
@@ -218,7 +188,6 @@ class HeartReadAPITest(APITestCase):
         self.assertEqual(response.status_code, 471, '상태코드가 올바르지 않습니다.')
         
         
-    # 4번 시나리오 
     def test_get_private_heart_list(self):
         """
             비공개 롤링페이퍼에 작성된 마음목록을 초대받은 유저는 조회할 수 있다.
@@ -227,7 +196,7 @@ class HeartReadAPITest(APITestCase):
         
         # API 요청
         pcode = {'pcode': self.private_rolling_paper.code}
-        url_with_params = f'{self.url}?{urlencode(pcode)}'
+        url_with_params = f'{self.api_url}?{urlencode(pcode)}'
         
         response = self.client.get(url_with_params)
         
@@ -240,7 +209,7 @@ class HeartReadAPITest(APITestCase):
                 'context': self.heart3.context,
                 'danger': self.heart3.danger,
                 'createdAt': localtime(self.heart3.createdAt).strftime('%Y.%m.%d'),
-                'index': self.heart3.index,
+                'location': self.heart3.location,
                 'code': str(self.heart3.code),
                 'blur': False
             },
@@ -251,7 +220,7 @@ class HeartReadAPITest(APITestCase):
                 'context': self.heart4.context,
                 'danger': self.heart4.danger,
                 'createdAt': localtime(self.heart3.createdAt).strftime('%Y.%m.%d'),
-                'index': self.heart4.index,
+                'location': self.heart4.location,
                 'code': str(self.heart4.code),
                 'blur': True
             }
@@ -271,7 +240,7 @@ class HeartReadAPITest(APITestCase):
     #     self.signin(user='user1')
         
     #     hcode = {'hcode': self.heart1.code}
-    #     url_with_params = f'{self.url}?{urlencode(hcode)}'
+    #     url_with_params = f'{self.api_url}?{urlencode(hcode)}'
         
     #     response = self.client.get(url_with_params)
         
@@ -283,7 +252,7 @@ class HeartReadAPITest(APITestCase):
     #         'danger': self.heart1.danger,
     #         'createdAt': localtime(self.heart1.createdAt).strftime('%Y.%m.%d'),
     #         'code': str(self.heart1.code),
-    #         'index': self.heart1.index
+    #         'indlocationex': self.heart1.location
     #     }
 
     #     # 응답 상태 코드 확인
@@ -294,104 +263,29 @@ class HeartReadAPITest(APITestCase):
         
     
 
-class HeartCreateAPITest(APITestCase):
-    @classmethod
-    def create_test_users(cls):
-        """테스트 유저 생성"""
-        cls.receiver = User.objects.create(
-            name='receiver',
-            email='receiver@gmail.com',
-        )
-        cls.host = User.objects.create(
-            name='host',
-            email='host@gmail.com',
-        )
-        cls.user1 = User.objects.create(
-            name='test_user1',
-            email='testuser1@gmail.com',
-        )
-        cls.user2 = User.objects.create(
-            name='test_user2',
-            email='testuser2@gmail.com',
-        )
-        cls.user1.set_password('1234')
-        cls.user1.save()
-        cls.user2.set_password('1234')
-        cls.user2.save()
-
-    @classmethod
-    def create_test_data(cls):
-        """테스트 롤링페이퍼와 마음 생성"""
-        # 테스트 롤링페이퍼 생성 (공개)
-        cls.public_rolling_paper = Paper.objects.create(
-            receiverFK=cls.receiver,
-            hostFK=cls.host,
-            receivingDate='2025-01-10',
-            title='공개 롤링페이퍼',
-            description='테스트 입니다.',
-            viewStat=True,
-        )
-        
-        # 테스트 롤링페이퍼 생성 (비공개)
-        cls.private_rolling_paper = Paper.objects.create(
-            receiverFK=cls.receiver,
-            hostFK=cls.host,
-            receivingDate='2025-01-10',
-            title='비공개 롤링페이퍼',
-            description='테스트 입니다.',
-            password='1234',
-            viewStat=False,
-        )
-        
-        # 롤링페이퍼로 유저 초대
-        cls.private_rolling_paper.invitingUser.add(cls.user1)
-        cls.private_rolling_paper.save()
-        
-
+class HeartCreateAPITest(BaseTestSetup):
     @classmethod
     def setUpTestData(cls):
-        """테스트 데이터 생성"""
-        cls.create_test_users()
-        cls.create_test_data()
-        cls.heart_url = reverse('heart_api')
+        """HeartCreateAPITest 전용 데이터 생성"""
+        super().setUpTestData()
         
         cls.public_heart_data = {
             'paperFK': cls.public_rolling_paper.id,
             'context': '마음1 테스트 입니다.',
-            'index': 1
+            'location': 1
         }
         cls.private_heart_data = {
             'paperFK': cls.private_rolling_paper.id,
             'context': '마음2 테스트 입니다.',
-            'index': 1
+            'location': 1
         }
-    
-    def signin(self, user):
-        """
-            테스트유저 로그인
-        """
-        signin_url = reverse('token_obtain_pair')
-        signin_data = {}
         
-        if user == 'user1':
-            signin_data['email'] = self.user1.email
-            signin_data['password'] = '1234'
-        else:
-            signin_data['email'] = self.user2.email
-            signin_data['password'] = '1234'
-            
-        response = self.client.post(signin_url, signin_data)
-        token = response.data.get('data')['access']
-        
-        # 인증 헤더 설정
-        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
-    
         
     def test_create_heart_without_authenticated(self):
         """
             로그인하지 않은 유저는 마음을 작성할 수 없다.
         """
-        response = self.client.post(self.heart_url, self.public_heart_data, format='json')
+        response = self.client.post(self.api_url, self.public_heart_data, format='json')
         
         # 응답 상태 코드 확인
         self.assertEqual(response.status_code, 401, '상태코드가 올바르지 않습니다.')
@@ -402,7 +296,7 @@ class HeartCreateAPITest(APITestCase):
             초대 받지 않은 유저는 마음을 작성할 수 없다.
         """
         self.signin('user2')
-        response = self.client.post(self.heart_url, self.private_heart_data, format='json')
+        response = self.client.post(self.api_url, self.private_heart_data, format='json')
         
         # 응답 상태 코드 확인
         self.assertEqual(response.status_code, 471, '상태코드가 올바르지 않습니다.')
@@ -413,8 +307,8 @@ class HeartCreateAPITest(APITestCase):
             새로운 마음을 생성할 수 있어야 한다.
         """
         self.signin('user1')
-        private_response = self.client.post(self.heart_url, self.private_heart_data, format='json')
-        public_response = self.client.post(self.heart_url, self.public_heart_data, format='json')
+        private_response = self.client.post(self.api_url, self.private_heart_data, format='json')
+        public_response = self.client.post(self.api_url, self.public_heart_data, format='json')
         
         # 응답 상태 코드 확인
         self.assertEqual(private_response.status_code, 201, '상태코드가 올바르지 않습니다.')
@@ -428,12 +322,13 @@ class HeartCreateAPITest(APITestCase):
             이미 마음을 작성한 유저는 재작성할 수 없다.
         """
         self.signin('user1')
-        self.client.post(self.heart_url, self.private_heart_data, format='json')
+        self.client.post(self.api_url, self.private_heart_data, format='json')
         
         # 재작성 요청
-        response = self.client.post(self.heart_url, self.private_heart_data, format='json')
+        response = self.client.post(self.api_url, self.private_heart_data, format='json')
     
         self.assertEqual(response.status_code, 482, '상태코드가 올바르지 않습니다.')
     
     
     
+
