@@ -10,9 +10,13 @@ class LoginAPITestCase(APITestCase):
         self.login_url = reverse('token_obtain_pair') # 로그인 엔드포인트 URL
         self.signup_url = reverse('signup') # 로그인 엔드포인트 URL
         self.signup_data = {
-            'name': 'testuser',
-            'email': 'test@test.com',
-            'password': 'testpassword',
+            "name": "testuser",
+            "email": "test@test.com",
+            "password": "testpassword",
+            "sex": 1,
+            "birth": "000101",
+            "phoneNumber": "01012345678",
+            "is_test":True
         }
         self.client.post(self.signup_url, self.signup_data, format='json')
 
