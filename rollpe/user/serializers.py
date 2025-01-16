@@ -42,15 +42,28 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
 
+    is_test = serializers.BooleanField(required=False, write_only=True) # 테스트 환경을위한 필드
+
     class Meta:
         model = User
         fields = '__all__'
+        extra_kwargs = {
+            'is_test': {'write_only': True}  # 클라이언트로부터 읽지 못하도록 설정
+        }
 
     def create(self, validated_data):
+
         password = validated_data.pop('password')
+        is_test = validated_data.pop('is_test', False)
+
         user = User.objects.create(**validated_data)
         user.set_password(password)
-        user.is_active = False # 이메일 인증용 코드
+
+        if is_test:  # 테스트 환경인 경우
+            user.is_active = True
+        else:  # 실제 API 호출인 경우
+            user.is_active = False
+
         user.save()
         
         return user

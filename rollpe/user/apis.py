@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework import permissions
 
 from django.core.mail import send_mail
 
@@ -62,9 +63,8 @@ def signup_api(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         try:
-
             user = serializer.create(serializer.validated_data)
-            serializer = UserSerializer(user)
+            # serializer = UserSerializer(user)
 
         except Exception as e:
             
@@ -105,3 +105,44 @@ class VerifyEmailAPI(APIView):
             return Response(data={"message": "이메일 인증이 완료되었습니다."}, status=200)
         except ValueError as e:
             return Response(data={"message": str(e)}, status=400)
+
+class ForgotPasswordAPI(APIView):
+    
+    def get_permissions(self):
+
+        if self.request.method == 'GET':
+            return [AllowAny()]  # GET 요청은 모든 사용자 허용
+        
+        elif self.request.method == 'POST':
+            return [IsAuthenticated()]  # POST 요청은 인증된 사용자만 허용
+        
+        elif self.request.method == 'PATCH':
+            return [IsAuthenticated()]  # PATCH 요청은 인증된 사용자만 허용
+        
+        return super().get_permissions()
+    
+    def patch(self, request):
+
+        refresh_token = request.data["refresh"]
+
+        password = request.data['newPassword']
+        password_check = request.data['newPasswordCheck']
+        
+        if password != password_check:
+            return Response(data={"message": "두 비밀번호가 일치하지 않습니다."}, status=400)
+        
+        user = User.objects.get(email=request.user.email)
+        
+        user.set_password(password)
+        user.save()
+
+        # 리프레시 토큰 무효화 처리
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()  # 리프레시 토큰 블랙리스트 처리 (SimpleJWT의 Blacklist 설정 필요)
+            except Exception as e:
+                return Response(data={"message": "토큰 무효화 중 오류가 발생했습니다."}, status=400)
+
+        return Response(data={"message": "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요."}, status=200)
+        
