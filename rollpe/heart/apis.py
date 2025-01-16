@@ -5,9 +5,11 @@ from rest_framework.pagination import PageNumberPagination
 import uuid
 
 from utils.response import Response
+from utils.share.functions import is_only_invited_user, is_host
 from paper.models import Paper
 from heart.models import Heart
-from heart.serializers import HeartSerializer, HeartWriteSerializer
+from heart.serializers import HeartReadSerializer, HeartWriteSerializer
+
 
 
 def is_valid_uuid(value):
@@ -39,36 +41,49 @@ class HeartAPI(APIView):
         
         if hcode:
             # 상세정보 가져오기
-            query = Heart.objects.filter(code=hcode)
-            if not is_valid_uuid(hcode) or not query.exists():
-                return Response(status=404)
+            # base_query = Heart.objects.filter(code=hcode)
+            # if not is_valid_uuid(hcode) or not base_query.exists():
+            #     return Response(status=404)
             
-            queryset = query.get()
-            serializer = HeartSerializer(queryset)
+            # heart_instance = base_query.get()
+            # serializer = HeartReadSerializer(
+            #     heart_instance,
+            # )
             
-            return Response(
-                data=serializer.data,
-                status=200
-            )
+            # return Response(
+            #     data=serializer.data,
+            #     status=200
+            # )
+            pass
         else:
             # 목록 가져오기
-            base_query = Paper.objects.filter(code=pcode)
-            
-            if not pcode or not is_valid_uuid(pcode) or not base_query.exists():
+            if not (pcode and is_valid_uuid(pcode)):
                 return Response(status=404)
             
-            paper_instance = base_query.get()
+            try:
+                paper_instance = Paper.objects.get(code=pcode)
+            except Paper.DoesNotExist:
+                return Response(status=404)
+            
+            is_public = paper_instance.viewStat
             
             # 비공개 롤링페이퍼일 경우 초대된 유저인지 검증
-            if not paper_instance.viewStat and not paper_instance.invitingUser.filter(pk=request.user.id).exists():
+            if not is_public and not is_only_invited_user(request.user, paper_instance):
                 return Response(status=471)
             
+            heart_instance_list = Heart.objects.filter(paperFK__code=pcode).order_by('createdAt')
+            
+            my_heart = heart_instance_list.filter(userFK=request.user.id).first()
+            my_pk = my_heart.id if my_heart else 0
+            
             paginator = self.pagination_class()
-            queryset = Heart.objects.filter(paperFK__code=pcode).all().order_by('createdAt')
-            
-            page = paginator.paginate_queryset(queryset, request)
-            serializer = HeartSerializer(page, many=True)
-            
+            page = paginator.paginate_queryset(heart_instance_list, request)
+            serializer = HeartReadSerializer(
+                page, 
+                is_public=is_public,
+                my_pk=my_pk,
+                many=True,
+            )
             return Response(
                 data=paginator.get_paginated_response(serializer.data).data,
                 status=200
@@ -82,16 +97,35 @@ class HeartAPI(APIView):
             비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
         """
         
+        # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
         
-        
+        # serialzier 검증
         serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
-            return Response(status=400)
-        heart_instance = serializer.create(serializer.validated_data)
+            return Response(status=480)
+        
+        validated_data = serializer.validated_data
+        
+        # 존재하는 Paper인지 검증
+        try:
+            paper_instance = Paper.objects.get(pk=validated_data['paperFK'])
+        except Paper.DoesNotExist:
+            return Response(status=404)
+        
+        # 중복 작성 검증
+        if Heart.objects.filter(userFK=request.user.id, paperFK=paper_instance.id).exists():
+            return Response(status=482)
+        
+        # 비공개 롤링페이퍼일 경우만 검증
+        if not paper_instance.viewStat and not is_only_invited_user(request.user, paper_instance):
+            return Response(status=471)
+        
+        validated_data['userFK'] = request.user.id
+        heart_instance = serializer.create(validated_data)
+        
         return Response(status=201)
-    
     
     
     def patch(self, request):
@@ -100,13 +134,14 @@ class HeartAPI(APIView):
             로그인 구현되면 코드 추가할 것
         """
         
-        if not request.user.is_authenticated:
-            return Response(status=401)
+        # if not request.user.is_authenticated:
+        #     return Response(status=401)
         
-        serializer = HeartWriteSerializer(data=request.data, method='patch')
-        if not serializer.is_valid():
-            return Response(status=400)
-        heart_instance = serializer.update(serializer.validated_data)
-        return Response(status=200)
+        # serializer = HeartWriteSerializer(data=request.data, method='patch')
+        # if not serializer.is_valid():
+        #     return Response(status=400)
+        # heart_instance = serializer.update(serializer.validated_data)
+        # return Response(status=200)
+        pass
 
 
