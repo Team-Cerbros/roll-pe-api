@@ -4,6 +4,23 @@ from django.db import models
 from django.contrib.auth.hashers import make_password
 
 from user.models import BaseTimeModel
+PAPER_QUERY_TYPE =[
+		("COLOR", "색상"),
+		("THEME", "테마"),
+		("SIZE", "사이즈"),
+		("RATIO", "비율")
+		]
+
+class QueryIndexTable(models.Model):
+	name = models.CharField(max_length=100)
+	query = models.JSONField(
+		default=dict,
+		)
+	type = models.CharField(
+		choices=PAPER_QUERY_TYPE,
+		max_length=6,
+		)
+	is_vip = models.BooleanField(default=False)
 
 # Create your models here.
 class Paper(BaseTimeModel):
@@ -20,6 +37,24 @@ class Paper(BaseTimeModel):
 		null=True,
 		blank=True
 	)
+
+	themeFK = models.ForeignKey(
+		QueryIndexTable,
+		on_delete=models.DO_NOTHING,
+		related_name='paper_theme'
+		)
+
+	sizeFk = models.ForeignKey(
+		QueryIndexTable,
+		on_delete=models.DO_NOTHING,
+		related_name='paper_size'
+		)
+
+	ratioFK = models.ForeignKey(
+		QueryIndexTable,
+		on_delete=models.DO_NOTHING,
+		related_name='paper_ratio'
+		)
 
 	receiverName = models.CharField(max_length=15, null=True, blank=True)
 
