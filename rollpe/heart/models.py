@@ -23,7 +23,7 @@ class Heart(BaseTimeModel):
 	context = models.TextField(
 		
 	)
-	index = models.IntegerField(
+	location = models.IntegerField(
 		null=True,
 		blank=True
 	)
