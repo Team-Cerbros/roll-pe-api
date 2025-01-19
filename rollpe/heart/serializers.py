@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from user.models import User
-from paper.models import Paper
+from paper.models import Paper, QueryIndexTable
 from heart.models import Heart
 
 class HeartReadSerializer(serializers.ModelSerializer):
@@ -15,10 +15,11 @@ class HeartReadSerializer(serializers.ModelSerializer):
     rollingPaperName = serializers.CharField(source='paperFK.title')
     createdAt = serializers.DateTimeField(format='%Y.%m.%d')
     blur=serializers.SerializerMethodField()
+    color=serializers.CharField(source='colorFK.name')
 
     class Meta:
         model = Heart
-        fields = ('id', 'userName', 'rollingPaperName', 'context', 'danger', 'createdAt', 'index', 'blur', 'code')
+        fields = ('id', 'userName', 'rollingPaperName', 'context', 'danger', 'createdAt', 'location', 'blur', 'code', 'color')
         
     def get_blur(self, obj):
         if self.is_public or self.my_pk == 0 or self.my_pk >= obj.id:
@@ -34,10 +35,11 @@ class HeartWriteSerializer(serializers.ModelSerializer):
         
         self.fields['paperFK'] = serializers.IntegerField()
         self.fields['context'] = serializers.CharField()
-        self.fields['index'] = serializers.IntegerField()
+        self.fields['location'] = serializers.IntegerField()
+        self.fields['color'] = serializers.CharField()
         
         if self.method == 'patch': 
-            self.fields['hcode'] = serializers.CharField()            
+            self.fields['heartPK'] = serializers.CharField()            
     
     class Meta:
         model = Heart
@@ -49,21 +51,11 @@ class HeartWriteSerializer(serializers.ModelSerializer):
         heart_instance = Heart.objects.create(
             userFK=User.objects.get(pk=validated_data['userFK']),
             paperFK=Paper.objects.get(pk=validated_data['paperFK']),
+            colorFK=QueryIndexTable.objects.get(name=validated_data['color']),
             context=validated_data['context'],
-            index=validated_data['index']
+            location=validated_data['location'],
         )
         return heart_instance
     
     
-    # def update(self, validated_data):
-        
-    #     user_id = validated_data['userFK']
-    #     paper_id = validated_data['paperFK']
-    #     context = validated_data['context']
-    #     hcode = validated_data['hcode']
-        
-    #     heart_instance = Heart.objects.filter(code=hcode).update(context=context)
-        
-    #     return heart_instance
-        
     
