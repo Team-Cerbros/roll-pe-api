@@ -89,6 +89,7 @@ class PaperAPI(APIView):
 
 
 
+
 class PaperInviteManageAPI(APIView):
 	def post(self, request):
 		pcode = request.data.get('pcode', None)
@@ -103,5 +104,3 @@ class PaperInviteManageAPI(APIView):
 			return Response(status=status.HTTP_204_NO_CONTENT)
 		else:
 			return Response(status=472)
-
-

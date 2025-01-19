@@ -3,6 +3,7 @@ import uuid
 
 from user.models import BaseTimeModel
 
+
 class Heart(BaseTimeModel):
 	userFK = models.ForeignKey(
      	'user.User', 
@@ -12,6 +13,12 @@ class Heart(BaseTimeModel):
     	'paper.Paper', 
     	on_delete=models.CASCADE
     )
+	colorFK = models.ForeignKey(
+		'paper.QueryIndexTable',
+		on_delete=models.CASCADE,
+		related_name='heart_color',
+		)
+
 	code = models.UUIDField(
     	default=uuid.uuid4, 
     	editable=True,
@@ -21,7 +28,6 @@ class Heart(BaseTimeModel):
 		default=0
 	)
 	context = models.TextField(
-		
 	)
 	location = models.IntegerField(
 		null=True,
@@ -30,4 +36,6 @@ class Heart(BaseTimeModel):
  
 	class Meta:
 		verbose_name = 'heart'
-  
+
+
+
