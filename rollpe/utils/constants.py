@@ -68,6 +68,11 @@ class SystemCodeManager:
 			"link": None,
 			"message": "해당 롤링페이퍼에 이미 마음을 작성하셨습니다."
 			},
+		483: {
+			"code": "TIME_LIMIT_EXCEEDED",
+			"link": None,
+			"message": "유효시간이 지나 수정을 할 수 없습니다."
+			},
 		}
 
 	@classmethod

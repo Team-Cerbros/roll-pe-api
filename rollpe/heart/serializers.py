@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.timezone import localtime
 
 from user.models import User
 from paper.models import Paper, QueryIndexTable
@@ -13,14 +14,17 @@ class HeartReadSerializer(serializers.ModelSerializer):
 
     userName = serializers.CharField(source='userFK.name')
     rollingPaperName = serializers.CharField(source='paperFK.title')
-    createdAt = serializers.DateTimeField(format='%Y.%m.%d')
+    createdAt = serializers.SerializerMethodField()
     blur=serializers.SerializerMethodField()
     color=serializers.CharField(source='colorFK.name')
 
     class Meta:
         model = Heart
         fields = ('id', 'userName', 'rollingPaperName', 'context', 'danger', 'createdAt', 'location', 'blur', 'code', 'color')
-        
+       
+    def get_createdAt(self, obj):
+        return localtime(obj.createdAt).strftime('%Y.%m.%d')    
+    
     def get_blur(self, obj):
         if self.is_public or self.my_pk == 0 or self.my_pk >= obj.id:
             return False
@@ -56,6 +60,14 @@ class HeartWriteSerializer(serializers.ModelSerializer):
             location=validated_data['location'],
         )
         return heart_instance
+    
+    def update(self, validated_data):
+        
+         Heart.objects.filter(pk=validated_data['heartPK']).update(
+            colorFK=QueryIndexTable.objects.get(name=validated_data['color']),
+            context=validated_data['context'],
+            location=validated_data['location'],
+        )
     
     
     

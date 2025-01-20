@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
+from django.utils.timezone import localtime, now
 
 from utils.response import Response
 from utils.share.functions import is_only_invited_user, is_valid_uuid
@@ -78,7 +79,6 @@ class HeartAPI(APIView):
             
     
     def post(self, request):
-        
         # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
@@ -111,11 +111,41 @@ class HeartAPI(APIView):
     
     
     def patch(self, request):
-        
+        # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
-        
+
         serializer = HeartWriteSerializer(data=request.data, method='patch')
-        pass
+        if not serializer.is_valid():
+            return Response(data= serializer.errors ,status=480)
+        
+        heart_id = serializer.validated_data['heartPK']
+        
+        # 객체 존재 여부 검증
+        try:
+            heart_instance = Heart.objects.get(pk=heart_id)
+        except Heart.DoesNotExist:
+            return Response(status=404)
+        
+        # 작성자 검증
+        if not heart_instance.userFK == request.user:
+            return Response(status=481)
+        
+        # 수정 가능 유효 시간 검증
+        created_at = localtime(heart_instance.createdAt)
+        current_time = localtime(now())
+        time_difference = current_time-created_at
+        
+        if time_difference.seconds > 60:
+            return Response(status=483)
+        
+        serializer.update(validated_data=serializer.validated_data)
+        
+        read_serializer = HeartReadSerializer(Heart.objects.get(pk=heart_id))
+            
+        return Response(
+            data=read_serializer.data,
+            status=200
+        )
 
 
