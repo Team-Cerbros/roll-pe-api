@@ -1,7 +1,8 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
-from django.utils.timezone import localtime
+from django.utils.timezone import localtime, now
+from datetime import timedelta
 from urllib.parse import urlencode
 from pprint import pprint
 from django.contrib.auth.hashers import make_password
@@ -370,7 +371,77 @@ class HeartCreateAPITest(BaseTestSetup):
         response = self.client.post(self.api_url, self.private_heart_data, format='json')
     
         self.assertEqual(response.status_code, 482, '상태코드가 올바르지 않습니다.')
-    
-    
-    
 
+
+class HeartUpdateAPITest(BaseTestSetup):
+    @classmethod
+    def setUpTestData(cls):
+        """HeartUpdateAPITest 전용 데이터 생성"""
+        super().setUpTestData()
+        
+        # 테스트 마음 생성
+        cls.heart1 = Heart.objects.create(
+            userFK=cls.user1,
+            paperFK=cls.public_rolling_paper,
+            colorFK=cls.color1,
+            context='롤링페이퍼의 테스트 마음1 입니다.',
+            location=1
+        )
+        
+        cls.update_data = {
+            'heartPK': cls.heart1.id,
+            'paperFK': cls.heart1.paperFK.id,
+            'color': 'F2EB28',
+            'context': '롤링페이퍼의 수정을 했습니다.',
+            'location': 1
+        }
+        
+    def test_update_heart_without_authenticated(self):
+        """
+             로그인하지 않은 유저는 마음을 수정할 수 없다.       
+        """
+        response = self.client.patch(self.api_url, self.update_data, format='json')
+        
+        self.assertEqual(response.status_code, 401, '상태코드가 올바르지 않습니다.')
+        
+        
+    def test_update_heart_without_permission(self):
+        """
+            본인이 작성하지 않은 마음을 수정할 수 없다.
+        """
+        self.signin('user2')
+        
+        response = self.client.patch(self.api_url, self.update_data, format='json')
+        
+        self.assertEqual(response.status_code, 481, '상태코드가 올바르지 않습니다.')
+        
+    
+    def test_update_heart(self):
+        """
+            마음을 수정할 수 있다.
+        """
+        self.signin('user1')
+        response = self.client.patch(self.api_url, self.update_data, format='json')
+        
+        updated_context = response.json()['data']['context']
+        
+        self.assertEqual(response.status_code, 200, '상태코드가 올바르지 않습니다.')
+        self.assertEqual(updated_context, self.update_data['context'], '수정 정보가 올바르게 반영되지 않았습니다.')
+        
+        
+    def test_update_heart_time_limit_exceeded(self):
+        """
+            유효시간이 지난 마음은 수정할 수 없다.
+        """
+        self.signin('user1')
+        
+        # 테스트를 위해 시간을 인위적으로 조작
+        heart1 = self.heart1
+        heart1.createdAt = now() - timedelta(hours=2)
+        heart1.save()
+        
+        response = self.client.patch(self.api_url, self.update_data, format='json')
+
+        self.assertEqual(response.status_code, 483, '상태코드가 올바르지 않습니다.')
+        
+    
