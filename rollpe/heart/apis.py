@@ -1,38 +1,20 @@
 from rest_framework.views import APIView
-from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
-import uuid
+from django.utils.timezone import localtime, now, make_aware
+from datetime import datetime, time, timedelta
 
 from utils.response import Response
-from utils.share.functions import is_only_invited_user, is_host
+from utils.share.functions import is_only_invited_user, is_valid_uuid
 from paper.models import Paper
 from heart.models import Heart
 from heart.serializers import HeartReadSerializer, HeartWriteSerializer
 
 
-
-def is_valid_uuid(value):
-    try:
-        if len(value) == 32:
-            value = f"{value[:8]}-{value[8:12]}-{value[12:16]}-{value[16:20]}-{value[20:]}"
-        uuid_obj = uuid.UUID(value, version=4)
-        return str(uuid_obj) == value
-    except (ValueError, TypeError):
-        return False
-
-
 class HeartAPI(APIView):
-    """
-        * 추가 작업 필요 상황
-        비공개면 초대받지 못한 유저의 경우 조회할 수 없도록 제어 필요
-    """
     pagination_class = PageNumberPagination
     def get(self, request):
-        """
-            pcode가 queryparameter에 없거나,
-            존재하지 않는 롤링페이퍼일 경우 404 처리
-        """
+        # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
         
@@ -41,20 +23,27 @@ class HeartAPI(APIView):
         
         if hcode:
             # 상세정보 가져오기
-            # base_query = Heart.objects.filter(code=hcode)
-            # if not is_valid_uuid(hcode) or not base_query.exists():
-            #     return Response(status=404)
+            if not is_valid_uuid(hcode):
+                return Response(status=404)
             
-            # heart_instance = base_query.get()
-            # serializer = HeartReadSerializer(
-            #     heart_instance,
-            # )
+            try:
+                heart_instance = Heart.objects.get(code=hcode)
+            except Heart.DoesNotExist:
+                return Response(status=404)
             
-            # return Response(
-            #     data=serializer.data,
-            #     status=200
-            # )
-            pass
+            paper_instance = heart_instance.paperFK
+            
+            is_public = paper_instance.viewStat
+            
+            if not is_public and not is_only_invited_user(request.user, paper_instance):
+                return Response(status=471)
+            
+            serializer = HeartReadSerializer(heart_instance)
+            
+            return Response(
+                data=serializer.data,
+                status=200
+            )
         else:
             # 목록 가져오기
             if not (pcode and is_valid_uuid(pcode)):
@@ -91,12 +80,6 @@ class HeartAPI(APIView):
             
     
     def post(self, request):
-        """
-            * 추가 작업 필요 상황
-            이미 작성했으면 못작성하도록 제어 필요
-            비공개면 초대받지 못한 유저의 경우 작성할 수 없도록 제어 필요
-        """
-        
         # 로그인 여부 검증
         if not request.user.is_authenticated:
             return Response(status=401)
@@ -104,7 +87,7 @@ class HeartAPI(APIView):
         # serialzier 검증
         serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
-            return Response(status=480)
+            return Response(data=serializer.errors, status=480)
         
         validated_data = serializer.validated_data
         
@@ -123,25 +106,89 @@ class HeartAPI(APIView):
             return Response(status=471)
         
         validated_data['userFK'] = request.user.id
-        heart_instance = serializer.create(validated_data)
+        serializer.create(validated_data)
         
         return Response(status=201)
     
     
     def patch(self, request):
-        """
-            본인이 작성한 게시물이 맞는지, 초대받은 유저가 맞는지 검증 필요
-            로그인 구현되면 코드 추가할 것
-        """
-        
-        # if not request.user.is_authenticated:
-        #     return Response(status=401)
-        
-        # serializer = HeartWriteSerializer(data=request.data, method='patch')
-        # if not serializer.is_valid():
-        #     return Response(status=400)
-        # heart_instance = serializer.update(serializer.validated_data)
-        # return Response(status=200)
-        pass
+        # 로그인 여부 검증
+        if not request.user.is_authenticated:
+            return Response(status=401)
 
+        serializer = HeartWriteSerializer(data=request.data, method='patch')
+        if not serializer.is_valid():
+            return Response(data=serializer.errors, status=480)
+        
+        heart_id = serializer.validated_data['heartPK']
+        
+        # 객체 존재 여부 검증
+        try:
+            heart_instance = Heart.objects.get(pk=heart_id)
+        except Heart.DoesNotExist:
+            return Response(status=404)
+        
+        # 작성자 검증
+        if not heart_instance.userFK == request.user:
+            return Response(status=481)
+        
+        # 수정 가능 유효 시간 검증
+        datetime_value = make_aware(datetime.combine(heart_instance.paperFK.receivingDate, time.min))
+        deadline = datetime_value - timedelta(days=1, seconds=1)
+        current_time = localtime(now())
+        
+        if deadline < current_time:
+            return Response(status=483)
+        
+        serializer.update(validated_data=serializer.validated_data)
+        
+        read_serializer = HeartReadSerializer(Heart.objects.get(pk=heart_id))
+            
+        return Response(
+            data=read_serializer.data,
+            status=200
+        )
+    
+    def delete(self, request):
+        
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        
+        if not request.user.is_staff:
+            return Response(status=484)
+        
+        hcode = request.GET.get('hcode')
+        
+        if not is_valid_uuid(hcode):
+            return Response(status=404)
+            
+        try:
+            heart_instance = Heart.objects.get(code=hcode)
+        except Heart.DoesNotExist:
+            return Response(status=404)
+        
+        heart_instance.delete()
+        
+        return Response(status=204)
+    
 
+@api_view(['GET'])
+def get_my_heart_list(request):
+    
+    if not request.user.is_authenticated:
+            return Response(status=401)
+
+    heart_instance_list = Heart.objects.filter(userFK=request.user).order_by('-createdAt')
+    
+    pagination_class = PageNumberPagination
+    paginator = pagination_class()
+    page = paginator.paginate_queryset(heart_instance_list, request)
+    
+    serializer = HeartReadSerializer(
+        page, 
+        many=True,
+    )
+    return Response(
+        data=paginator.get_paginated_response(serializer.data).data,
+        status=200
+    )
