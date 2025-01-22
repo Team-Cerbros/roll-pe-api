@@ -35,7 +35,7 @@ def verify_email_token(token):
 
 def generate_send_email(request, email, path_code):
     token = generate_email_verification_token(email)
-    activation_url = f"{request.scheme}://{request.get_host()}/api/user/verify-email?token={token}&path_code={path_code}"
+    activation_url = f"{request.scheme}://{request.get_host()}/api/user/verify-email?path_code={path_code}&token={token}"
 
     # 이메일 발송
     send_mail(

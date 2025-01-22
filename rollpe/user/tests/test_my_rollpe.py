@@ -2,7 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from user.models import User
-from paper.models import Paper  # Paper 모델 임포트
+from paper.models import Paper,QueryIndexTable  # Paper 모델 임포트
 
 class UserPaperAPITestCase(APITestCase):
     def setUp(self):
@@ -10,11 +10,15 @@ class UserPaperAPITestCase(APITestCase):
         self.user1 = User.objects.create_user(name="user1", email="user1@test.com", password="password1", is_active=True)
         self.user2 = User.objects.create_user(name="user2", email="user2@test.com", password="password2", is_active=True)
         self.user3 = User.objects.create_user(name="user3", email="user3@test.com", password="password3", is_active=True)
+        self.index_table = QueryIndexTable.objects.create(name="test", query={}, type="Type", is_vip=0)
 
         # 테스트용 Paper 생성
         self.paper1 = Paper.objects.create(
             hostFK=self.user1,
             receiverFK=self.user2,
+            themeFK=self.index_table,
+            sizeFk=self.index_table,
+            ratioFK=self.index_table,
             receiverName="Receiver 1",
             receiverTel="01012345678",
             receivingDate="2023-12-01",
@@ -24,6 +28,9 @@ class UserPaperAPITestCase(APITestCase):
         self.paper2 = Paper.objects.create(
             hostFK=self.user1,
             receiverFK=self.user3,
+            themeFK=self.index_table,
+            sizeFk=self.index_table,
+            ratioFK=self.index_table,
             receiverName="Receiver 2",
             receiverTel="01098765432",
             receivingDate="2023-12-02",
@@ -52,8 +59,8 @@ class UserPaperAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # 데이터 확인 (user3는 paper1의 invitingUser로 추가됨)
-        self.assertEqual(len(response.data.get("data").get("papers")), 1)  # paper1만 포함됨
-        self.assertEqual(response.data.get("data").get("count"), 1)
+        self.assertEqual(len(response.json().get("data").get("papers")), 1)  # paper1만 포함됨
+        self.assertEqual(response.json().get("data").get("count"), 1)
     
     def test_get_papers_where_receiver(self):
         """
@@ -65,5 +72,5 @@ class UserPaperAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         # 데이터 확인 (user3는 paper2의 receiverFK임)
-        self.assertEqual(len(response.data.get("data").get("papers")), 1)  # paper1만 포함됨
-        self.assertEqual(response.data.get("data").get("count"), 1)
+        self.assertEqual(len(response.json().get("data").get("papers")), 1)  # paper1만 포함됨
+        self.assertEqual(response.json().get("data").get("count"), 1)

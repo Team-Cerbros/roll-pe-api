@@ -1,18 +1,16 @@
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework import status
 from rest_framework import permissions
 
 from django.shortcuts import redirect
 from django.conf import settings
 
 from utils.response import Response
-from utils.functions import generate_email_verification_token, verify_email_token, generate_send_email
+from utils.functions import verify_email_token, generate_send_email
 
 from user.serializers import UserSerializer, CustomTokenObtainPairSerializer
 from user.models import User
@@ -75,10 +73,10 @@ def signup_api(request):
         
         except Exception as e:
             
-            return Response(data=serializer.errors, status=400)
+            return Response(msg=serializer.errors, status=400)
 
     else:
-        return Response(data=serializer.errors, status=400)
+        return Response(msg=serializer.errors, status=400)
 
 
 ### 예정 : 추후 이메일 인증 완료 페이지 redirect ###
@@ -132,7 +130,7 @@ class VerifyEmailAPI(APIView):
 class ForgotPasswordAPI(APIView):
 
     permission_classes = [permissions.AllowAny]
-    
+
     def get_permissions(self):
 
         if self.request.method == 'GET':
@@ -148,7 +146,7 @@ class ForgotPasswordAPI(APIView):
     
     def post(self, request):
         email = request.data['email']
-        if not User.objects.exists(email=email):
+        if not User.objects.filter(email=email).exists():
             return Response(msg="회원가입되지 않은 이메일입니다.", status=400)
         
         generate_send_email(request, email, path_code="password")
