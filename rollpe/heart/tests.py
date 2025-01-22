@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 from django.utils.timezone import localtime, now
+from datetime import datetime
 from datetime import timedelta
 from urllib.parse import urlencode
 from pprint import pprint
@@ -55,7 +56,7 @@ class BaseTestSetup(APITestCase):
         cls.public_rolling_paper = Paper.objects.create(
             receiverFK=cls.receiver,
             hostFK=cls.host,
-            receivingDate='2025-01-10',
+            receivingDate='2026-12-31',
             title='공개 롤링페이퍼',
             description='테스트 입니다.',
             viewStat=True,
@@ -68,7 +69,7 @@ class BaseTestSetup(APITestCase):
         cls.private_rolling_paper = Paper.objects.create(
             receiverFK=cls.receiver,
             hostFK=cls.host,
-            receivingDate='2025-01-10',
+            receivingDate='2026-12-31',
             title='비공개 롤링페이퍼',
             description='테스트 입니다.',
             password='1234',
@@ -436,9 +437,9 @@ class HeartUpdateAPITest(BaseTestSetup):
         self.signin('user1')
         
         # 테스트를 위해 시간을 인위적으로 조작
-        heart1 = self.heart1
-        heart1.createdAt = now() - timedelta(hours=2)
-        heart1.save()
+        paper = self.public_rolling_paper
+        paper.receivingDate = now().date() + timedelta(days=1)
+        paper.save()
         
         response = self.client.patch(self.api_url, self.update_data, format='json')
 

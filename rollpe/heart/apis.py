@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
-from django.utils.timezone import localtime, now
+from django.utils.timezone import localtime, now, make_aware
+from datetime import datetime, time, timedelta
 
 from utils.response import Response
 from utils.share.functions import is_only_invited_user, is_valid_uuid
@@ -86,7 +87,7 @@ class HeartAPI(APIView):
         # serialzier 검증
         serializer = HeartWriteSerializer(data=request.data, method='post')
         if not serializer.is_valid():
-            return Response(status=480)
+            return Response(data=serializer.errors, status=480)
         
         validated_data = serializer.validated_data
         
@@ -105,7 +106,7 @@ class HeartAPI(APIView):
             return Response(status=471)
         
         validated_data['userFK'] = request.user.id
-        heart_instance = serializer.create(validated_data)
+        serializer.create(validated_data)
         
         return Response(status=201)
     
@@ -117,7 +118,7 @@ class HeartAPI(APIView):
 
         serializer = HeartWriteSerializer(data=request.data, method='patch')
         if not serializer.is_valid():
-            return Response(data= serializer.errors ,status=480)
+            return Response(data=serializer.errors, status=480)
         
         heart_id = serializer.validated_data['heartPK']
         
@@ -132,11 +133,11 @@ class HeartAPI(APIView):
             return Response(status=481)
         
         # 수정 가능 유효 시간 검증
-        created_at = localtime(heart_instance.createdAt)
+        datetime_value = make_aware(datetime.combine(heart_instance.paperFK.receivingDate, time.min))
+        deadline = datetime_value - timedelta(days=1, seconds=1)
         current_time = localtime(now())
-        time_difference = current_time-created_at
         
-        if time_difference.seconds > 60:
+        if deadline < current_time:
             return Response(status=483)
         
         serializer.update(validated_data=serializer.validated_data)
@@ -149,3 +150,4 @@ class HeartAPI(APIView):
         )
 
 
+        
