@@ -29,7 +29,8 @@ class HeartReadSerializer(serializers.ModelSerializer):
         if self.is_public or self.my_pk == 0 or self.my_pk >= obj.id:
             return False
         return True
-                    
+    
+
     
 class HeartWriteSerializer(serializers.ModelSerializer):
     

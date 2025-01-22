@@ -148,6 +148,47 @@ class HeartAPI(APIView):
             data=read_serializer.data,
             status=200
         )
-
-
+    
+    def delete(self, request):
         
+        if not request.user.is_authenticated:
+            return Response(status=401)
+        
+        if not request.user.is_staff:
+            return Response(status=484)
+        
+        hcode = request.GET.get('hcode')
+        
+        if not is_valid_uuid(hcode):
+            return Response(status=404)
+            
+        try:
+            heart_instance = Heart.objects.get(code=hcode)
+        except Heart.DoesNotExist:
+            return Response(status=404)
+        
+        heart_instance.delete()
+        
+        return Response(status=204)
+    
+
+@api_view(['GET'])
+def get_my_heart_list(request):
+    
+    if not request.user.is_authenticated:
+            return Response(status=401)
+
+    heart_instance_list = Heart.objects.filter(userFK=request.user).order_by('-createdAt')
+    
+    pagination_class = PageNumberPagination
+    paginator = pagination_class()
+    page = paginator.paginate_queryset(heart_instance_list, request)
+    
+    serializer = HeartReadSerializer(
+        page, 
+        many=True,
+    )
+    return Response(
+        data=paginator.get_paginated_response(serializer.data).data,
+        status=200
+    )

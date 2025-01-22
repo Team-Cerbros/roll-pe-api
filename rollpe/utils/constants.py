@@ -73,6 +73,11 @@ class SystemCodeManager:
 			"link": None,
 			"message": "유효시간이 지나 수정을 할 수 없습니다."
 			},
+		484: {
+			"code": "YOUR_NOT_ADMIN",
+			"link": None,
+			"message": "해당 요청은 관리자 권한으로만 수행할 수 있습니다."
+			},
 		}
 
 	@classmethod
