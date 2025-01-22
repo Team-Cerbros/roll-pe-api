@@ -1,8 +1,6 @@
 from rest_framework import serializers
-from rest_framework import status
 from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import authenticate
 from utils.response import Response
 

@@ -8,12 +8,11 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework import permissions
 
-from django.core.mail import send_mail
-
+from django.shortcuts import redirect
 from django.conf import settings
 
 from utils.response import Response
-from utils.functions import generate_email_verification_token, verify_email_token
+from utils.functions import generate_email_verification_token, verify_email_token, generate_send_email
 
 from user.serializers import UserSerializer, CustomTokenObtainPairSerializer
 from user.models import User
@@ -21,6 +20,8 @@ from user.models import User
 from paper.models import Paper
 
 class CustomTokenObtainPairAPI(TokenObtainPairView):
+
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
 
@@ -35,6 +36,7 @@ class CustomTokenObtainPairAPI(TokenObtainPairView):
             # 실패 시 errors 반환
             return Response(data=serializer.errors, status=400)
         
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_api(request):
@@ -52,7 +54,6 @@ def logout_api(request):
     return Response(msg="로그아웃 되었습니다.", status=200)
 
 
-### 회원가입 이메일 인증용 API
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_api(request):
@@ -68,30 +69,31 @@ def signup_api(request):
             user = serializer.create(serializer.validated_data)
             # serializer = UserSerializer(user)
 
+            generate_send_email(request, user.email, path_code="email")
+
+            return Response(msg="회원가입이 완료되었습니다. 이메일을 확인해주세요.", status=201)
+        
         except Exception as e:
             
             return Response(data=serializer.errors, status=400)
-        
-        # 이메일 인증 토큰 생성
-        token = generate_email_verification_token(user)
-        activation_url = f"{request.scheme}://{request.get_host()}/api/user/verify-email?token={token}"
 
-        # 이메일 발송
-        send_mail(
-            subject="이메일 인증을 완료해주세요.",
-            message=f"다음 링크를 클릭하여 이메일 인증을 완료하세요: {activation_url}",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[user.email],
-        )
-
-        return Response(msg="회원가입이 완료되었습니다. 이메일을 확인해주세요.", status=201)
     else:
         return Response(data=serializer.errors, status=400)
 
 
+### 예정 : 추후 이메일 인증 완료 페이지 redirect ###
+# 회원가입 이메일 인증시 
+# 비밀번호 찾기 이메일 인증시
 class VerifyEmailAPI(APIView):
+
+    permission_classes = [permissions.AllowAny]
+
     def get(self, request):
+
+        # domain = settings.REDIRECT_DOMAIN
+
         token = request.GET.get("token")
+        path_code = request.GET.get("pathCode")
         if not token:
             return Response(msg="토큰이 필요합니다.", status=400)
 
@@ -100,15 +102,36 @@ class VerifyEmailAPI(APIView):
             user_email = payload["email"]
 
             # 이메일 인증 완료 처리
-            user = User.objects.get(email=user_email)
-            user.is_active = True
-            user.save()
 
+            match path_code:
+
+                case "email":
+                    # redirect_url = ""
+                    user = User.objects.get(email=user_email)
+                    user.is_active = True
+                    user.save()
+                    
+                case "password":
+                    # redirect_url = ""
+                    pass
+
+            # return redirect(redirect_url)
             return Response(msg="이메일 인증이 완료되었습니다.", status=200)
+        
         except ValueError as e:
+
             return Response(msg=str(e), status=400)
+    
+    def patch(self, request):
+        email = request.data["email"]
+
+        path_code = request.data["pathCode"]
+        generate_send_email(request, email, path_code=path_code)
+        return Response(msg="인증 이메일을 재 전송하였습니다.", status=200)
 
 class ForgotPasswordAPI(APIView):
+
+    permission_classes = [permissions.AllowAny]
     
     def get_permissions(self):
 
@@ -123,9 +146,17 @@ class ForgotPasswordAPI(APIView):
         
         return super().get_permissions()
     
+    def post(self, request):
+        email = request.data['email']
+        if not User.objects.exists(email=email):
+            return Response(msg="회원가입되지 않은 이메일입니다.", status=400)
+        
+        generate_send_email(request, email, path_code="password")
+        return Response(msg="비밀번호 변경 이메일이 전송되었습니다.", status=200)
+
     def patch(self, request):
 
-        refresh_token = request.data["refresh"]
+        refresh_token = request.data.get("refresh")
 
         password = request.data['newPassword']
         password_check = request.data['newPasswordCheck']
