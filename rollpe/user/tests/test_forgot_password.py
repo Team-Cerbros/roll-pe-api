@@ -39,15 +39,23 @@ class ForgotPasswordTestCase(APITestCase):
 
     def test_change_password_success(self):
         """
-        비밀번호 변경 후 변경된 비밀번호로 재로그인 성공 테스트
+        마이페이지에서 비밀번호 변경 후 변경된 비밀번호로 재로그인 성공 테스트
         """
         response = self.client.patch(self.change_password_url, self.change_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('data').get('message'), "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
+
+        # 비밀번호 변경후 로그아웃 시키기
+        self.client.post(self.logout_url, {"refresh": self.login_response.data.get('data').get('refresh')})
 
         # 변경된 비밀번호로 로그인 시도
         new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
         self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
         self.assertIn('access', new_login_response.data.get('data'))
         self.assertIn('refresh', new_login_response.data.get('data'))
+
+    def test_find_password_success(self):
+        """
+        이메일 인증 후 비밀번호 변경
+        """
 

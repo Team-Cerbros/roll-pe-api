@@ -18,6 +18,7 @@ from utils.functions import generate_email_verification_token, verify_email_toke
 from user.serializers import UserSerializer, CustomTokenObtainPairSerializer
 from user.models import User
 
+from paper.models import Paper
 
 class CustomTokenObtainPairAPI(TokenObtainPairView):
 
@@ -40,14 +41,15 @@ def logout_api(request):
     refresh_token = request.data.get("refresh")
 
     if not refresh_token:
-        return Response(data={"message": "Refresh token이 없습니다."}, status=400)
+        return Response(msg="Refresh token이 없습니다.", status=400)
 
     try:
         token = RefreshToken(refresh_token)
-        token.blacklist()  # 토큰을 블랙리스트에 추가
-        return Response(status=200)
-    except TokenError:
-        return Response(data={"message": "유효한 Refresh Token이 아닙니다."}, status=400)
+        token.blacklist()  
+    except TokenError as e:
+        return Response(msg="유효한 Refresh Token이 아닙니다. ", status=400)
+
+    return Response(msg="로그아웃 되었습니다.", status=200)
 
 
 ### 회원가입 이메일 인증용 API
@@ -58,7 +60,7 @@ def signup_api(request):
     email = request.data.get("email")
 
     if User.objects.filter(email=email).exists():
-        return Response(data={"message": "이미 가입된 이메일입니다."}, status=400)
+        return Response(msg="이미 가입된 이메일입니다.", status=400)
 
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
@@ -82,7 +84,7 @@ def signup_api(request):
             recipient_list=[user.email],
         )
 
-        return Response(data={"message": "회원가입이 완료되었습니다. 이메일을 확인해주세요."}, status=201)
+        return Response(msg="회원가입이 완료되었습니다. 이메일을 확인해주세요.", status=201)
     else:
         return Response(data=serializer.errors, status=400)
 
@@ -91,7 +93,7 @@ class VerifyEmailAPI(APIView):
     def get(self, request):
         token = request.GET.get("token")
         if not token:
-            return Response(data={"error": "토큰이 필요합니다."}, status=400)
+            return Response(msg="토큰이 필요합니다.", status=400)
 
         try:
             payload = verify_email_token(token)
@@ -102,9 +104,9 @@ class VerifyEmailAPI(APIView):
             user.is_active = True
             user.save()
 
-            return Response(data={"message": "이메일 인증이 완료되었습니다."}, status=200)
+            return Response(msg="이메일 인증이 완료되었습니다.", status=200)
         except ValueError as e:
-            return Response(data={"message": str(e)}, status=400)
+            return Response(msg=str(e), status=400)
 
 class ForgotPasswordAPI(APIView):
     
@@ -129,20 +131,66 @@ class ForgotPasswordAPI(APIView):
         password_check = request.data['newPasswordCheck']
         
         if password != password_check:
-            return Response(data={"message": "두 비밀번호가 일치하지 않습니다."}, status=400)
+            return Response(msg="두 비밀번호가 일치하지 않습니다.", status=400)
         
         user = User.objects.get(email=request.user.email)
         
         user.set_password(password)
         user.save()
 
-        # 리프레시 토큰 무효화 처리
+        # 리프레시 토큰 무효화 처리 (로그아웃)
         if refresh_token:
             try:
                 token = RefreshToken(refresh_token)
-                token.blacklist()  # 리프레시 토큰 블랙리스트 처리 (SimpleJWT의 Blacklist 설정 필요)
+                token.blacklist()  
             except Exception as e:
-                return Response(data={"message": "토큰 무효화 중 오류가 발생했습니다."}, status=400)
+                return Response(msg="토큰 무효화 중 오류가 발생했습니다.", status=400)
 
-        return Response(data={"message": "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요."}, status=200)
+        return Response(msg="비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.", status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def myid_in_invate_rollpe_api(request):
+    user = request.user
+
+    # invitingUser에 현재 사용자(user)가 포함된 Papers 조회
+    papers = Paper.objects.filter(invitingUser=user).distinct()
+    
+    data = {
+        "count": papers.count(),
+        "papers": [
+            {
+                "id": paper.id,
+                "title": paper.title,
+                "description": paper.description,
+                "receivingDate": paper.receivingDate,
+            }
+            for paper in papers
+        ]
+    }
+    
+    return Response(data=data, status=200)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def receiver_is_me_api(request):
+    user = request.user
         
+    # receiverFK_id가 현재 사용자(user)의 ID인 Papers 조회
+    papers = Paper.objects.filter(receiverFK=user).distinct()
+    
+    data = {
+        "count": papers.count(),
+        "papers": [
+            {
+                "id": paper.id,
+                "title": paper.title,
+                "description": paper.description,
+                "receivingDate": paper.receivingDate,
+            }
+            for paper in papers
+        ]
+    }
+    
+    return Response(data=data, status=200)
