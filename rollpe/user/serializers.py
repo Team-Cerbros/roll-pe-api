@@ -1,8 +1,6 @@
 from rest_framework import serializers
-from rest_framework import status
 from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth import authenticate
 from utils.response import Response
 
@@ -17,7 +15,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # 이메일 존재 여부 확인
         if not User.objects.filter(email=email).exists():
             return Response(
-                data={"message": "사용자를 찾을 수 없습니다."},
+                msg="사용자를 찾을 수 없습니다.",
                 status=400
             )
 
@@ -25,7 +23,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         user = authenticate(email=email, password=password)
         if user is None:
             return Response(
-                data={"message": "비밀번호가 틀렸습니다."},
+                msg="비밀번호가 틀렸습니다.",
                 status=400
             )
 

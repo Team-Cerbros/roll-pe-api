@@ -2,26 +2,18 @@ from rest_framework.test import APITestCase
 from django.urls import reverse
 from user.models import User
 from rest_framework import status
+from django.core import mail
+import jwt
+from django.conf import settings
 
 class ForgotPasswordTestCase(APITestCase):
     def setUp(self):
-        self.signup_url = reverse("signup")
         self.login_url = reverse("token_obtain_pair")
         self.logout_url = reverse("logout")
         self.change_password_url = reverse("forgot_password")
+        self.verify_email_url = reverse('verify_email')  # 이메일 인증 URL
 
-        # 회원가입
-        self.sign_up_data = {
-            "name": "testuser",
-            "email": "test@test.com",
-            "password": "testpassword",
-            "sex": 1,
-            "birth": "000101",
-            "phoneNumber": "01012345678",
-            "is_test":True
-        }
-        self.test = self.client.post(self.signup_url, self.sign_up_data, format='json')
-        
+        User.objects.create_user(name="testuser", email="test@test.com", password="testpassword", is_active=True)
         # 로그인
         self.sign_in_data = {
             "email": "test@test.com",
@@ -29,25 +21,123 @@ class ForgotPasswordTestCase(APITestCase):
         }
         self.login_response = self.client.post(self.login_url, self.sign_in_data)
         # 헤더에 토큰 추가
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.login_response.data.get('data').get('access')}')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.login_response.json().get('data').get('access')}')
 
         self.change_data = {
-            'refresh':self.login_response.data.get('data').get('refresh'),
+            'refresh':self.login_response.json().get('data').get('refresh'),
             'newPassword':'testnewpassword',
             'newPasswordCheck':'testnewpassword'
         }
+        # 비밀번호 변경을 위한 이메일 인증
+        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
 
     def test_change_password_success(self):
         """
-        비밀번호 변경 후 변경된 비밀번호로 재로그인 성공 테스트
+        마이페이지에서 비밀번호 변경 후 변경된 비밀번호로 재로그인 성공 테스트
         """
         response = self.client.patch(self.change_password_url, self.change_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('data').get('message'), "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
+        self.assertEqual(response.json()['message'], "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
+
+        # 비밀번호 변경후 로그아웃 시키기
+        self.client.post(self.logout_url, {"refresh": self.login_response.json().get('data').get('refresh')})
 
         # 변경된 비밀번호로 로그인 시도
         new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
         self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
-        self.assertIn('access', new_login_response.data.get('data'))
-        self.assertIn('refresh', new_login_response.data.get('data'))
+        self.assertIn('access', new_login_response.json().get('data'))
+        self.assertIn('refresh', new_login_response.json().get('data'))
+
+    def test_verify_email_with_valid_token(self):
+        """
+        로그인 페이지에서 비밀번호 변경을 위한 이메일 발송 test
+        """
+
+        # 이메일 발송 여부 확인
+        self.assertEqual(len(mail.outbox), 1)  # 이메일 한 건이 발송되었는지 확인
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ["test@test.com"])
+
+        # 이메일 본문에서 토큰 추출
+        token_start_index = email.body.find("token=") + len("token=")
+        self.token = email.body[token_start_index:].strip()  # 이메일 본문에서 토큰 추출
+        self.assertTrue(self.token, "Token not found in email body")
+
+    def test_verify_email_with_valid_token(self):
+        """
+        유효한 토큰으로 이메일 인증 성공후 비밀번호 변경 성공 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 이메일 인증 요청
+        response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["message"], "이메일 인증이 완료되었습니다.")
+
+        # 비밀변호 변경 요청
+        response = self.client.patch(self.change_password_url, self.change_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['message'], "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
+
+        # 비밀번호 변경후 로그아웃 시키기
+        self.client.post(self.logout_url, {"refresh": self.login_response.json().get('data').get('refresh')})
+
+        # 변경된 비밀번호로 로그인 시도
+        new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
+        self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', new_login_response.json().get('data'))
+        self.assertIn('refresh', new_login_response.json().get('data'))
+
+    def test_verify_email_with_invalid_token(self):
+        """
+        잘못된 토큰으로 이메일 인증 실패 여부 테스트
+        """
+        # 잘못된 토큰으로 요청
+        invalid_token = jwt.encode({"email": "test@test.com"}, "wrong_secret", algorithm="HS256")
+        response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={invalid_token}")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["message"], "유효하지 않은 토큰입니다.")
+
+    def test_verify_email_with_expired_token(self):
+        """
+        만료된 토큰으로 이메일 인증 실패 여부 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 만료된 토큰 생성 (exp를 과거로 설정)
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        expired_token = jwt.encode(
+            {**payload, "exp": 0},  # 만료 시간 0으로 설정
+            settings.SECRET_KEY,
+            algorithm="HS256"
+        )
+
+        # 만료된 토큰으로 요청
+        response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={expired_token}")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["message"], "토큰이 만료되었습니다.")
+    
+    def test_verify_email_with_used_token(self):
+        """
+        이미 사용한 토큰으로 이메일 인증 실패 여부 테스트
+        """
+
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
+
+        # 같은 토큰으로 2번 요청
+        self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 성공
+        response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 실패
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()["message"], "이미 사용된 토큰입니다.") 
 
