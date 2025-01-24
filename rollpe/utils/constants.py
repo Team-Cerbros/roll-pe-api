@@ -50,7 +50,12 @@ class SystemCodeManager:
 		472: {
 			"code": "PASSWORD_IS_NOT_CORRECT",
 			"link": None,
-			"message": "비밀번호가 틀립니다."
+			"message": "롤페의 비밀번호가 틀립니다."
+			},
+		473: {
+			"code": "ALREADY_ENTERED_USER",
+			"link": None,
+			"message": "이미 추가된 유저입니다."
 			},
 		# Heart Custom Response
 		480: {

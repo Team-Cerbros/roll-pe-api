@@ -1,4 +1,4 @@
-from django.contrib.auth.handlers.modwsgi import check_password
+from django.contrib.auth.hashers import check_password
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
@@ -62,10 +62,21 @@ class PaperAPI(APIView):
 		pcode = request.query_params.get('pcode', None)
 
 		if pcode is None:
-			return Response(status=status.HTTP_400_BAD_REQUEST)
+			return Response(
+				msg="pcode가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		if not request.user.is_authenticated:
+			return Response(status=401)
 
 		user = User.objects.get(pk=request.user.id)
-		paper = Paper.objects.get(code=pcode)
+		try:
+
+			paper = Paper.objects.get(code=pcode)
+		except Paper.DoesNotExist as e:
+			return Response(msg=str(e), status=status.HTTP_404_NOT_FOUND)
+
 		response = PaperSerializer(paper).data
 
 		if is_invited_user(user, paper):
@@ -93,14 +104,44 @@ class PaperAPI(APIView):
 class PaperInviteManageAPI(APIView):
 	def post(self, request):
 		pcode = request.data.get('pcode', None)
+		print(pcode)
 
 		if pcode is None:
-			return Response(status=status.HTTP_400_BAD_REQUEST)
+			return Response(
+				msg="pcode가 없습니다.",
+				status=status.HTTP_400_BAD_REQUEST
+				)
+
+		if not request.user.is_authenticated:
+			return Response(status=401)
+
 		user = User.objects.get(pk=request.user.id)
 		paper = Paper.objects.get(code=pcode, hostFK=user)
+		request_password = request.data.get('password', None)
 
-		if check_password(request.data['password'], paper.password):
+
+
+		if paper.invitingUser.filter(pk=user.pk).exists():
+			return Response(status=473)
+
+		if paper.viewStat:
 			paper.invitingUser.add(user)
-			return Response(status=status.HTTP_204_NO_CONTENT)
+			return Response(
+				msg="추가 되었습니다.",
+				status=status.HTTP_204_NO_CONTENT
+				)
 		else:
-			return Response(status=472)
+			if request_password is None:
+				return Response(
+					msg="password가 없습니다.",
+					status=status.HTTP_400_BAD_REQUEST
+					)
+
+			if check_password(request_password, paper.password):
+				paper.invitingUser.add(user)
+				return Response(
+					msg="추가 되었습니다.",
+					status=status.HTTP_204_NO_CONTENT
+					)
+			else:
+				return Response(status=472)
