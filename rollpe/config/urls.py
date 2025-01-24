@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from paper.apis import QueryIndexAPI
+
 urlpatterns = [
     path('admin', admin.site.urls),
     path('api/paper', include('paper.urls')),
     path('api/heart', include('heart.urls')),
     path('api/user', include('user.urls')),
+    path('api/index', QueryIndexAPI.as_view(), name="query_index"),
+
     ]
