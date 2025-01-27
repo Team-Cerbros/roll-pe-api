@@ -44,7 +44,7 @@ class Paper(BaseTimeModel):
 		related_name='paper_theme'
 		)
 
-	sizeFk = models.ForeignKey(
+	sizeFK = models.ForeignKey(
 		QueryIndexTable,
 		on_delete=models.DO_NOTHING,
 		related_name='paper_size'

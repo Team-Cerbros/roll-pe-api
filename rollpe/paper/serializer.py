@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from paper.models import Paper
+from paper.models import Paper, QueryIndexTable
 
 
 class UserShowPaperSerializer(serializers.ModelSerializer):
@@ -18,6 +18,7 @@ class PaperCreateSerializer(serializers.ModelSerializer):
 		fields = [
 			'hostFK', 'receiverFK', 'receiverName',
 			'receiverTel', 'receivingDate', 'receivingStat',
+			'themeFK', 'sizeFK', 'ratioFK',
 			'viewStat', 'title', 'description', 'password',
 			]
 		read_only_fields = ("id", "createdAt", "updatedAt", "code")
@@ -47,3 +48,23 @@ class PaperSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Paper
 		exclude = ('id', 'updatedAt', 'password')
+
+
+
+class QueryIndexSerializer(serializers.ModelSerializer):
+	name = serializers.SerializerMethodField()
+	class Meta:
+		model = QueryIndexTable
+		fields = ('id', 'name', 'query', 'type', 'is_vip')
+
+	def get_name(self, paper):
+		if paper.type == "COLOR":
+			return "#" + paper.name
+		else:
+			return paper.name
+
+
+class QueryIndexCreateSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = QueryIndexTable
+		fields = ('name', 'query', 'type', 'is_vip')
