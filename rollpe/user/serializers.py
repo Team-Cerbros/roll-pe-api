@@ -65,3 +65,12 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         
         return user
+
+
+
+class UserViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'code', 'name', 'email', 'birth', 'sex', 'phoneNumber', 'createdAt'
+        )

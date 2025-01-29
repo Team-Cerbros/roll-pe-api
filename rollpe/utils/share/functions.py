@@ -20,10 +20,10 @@ def is_invited_user(user: User, paper: Paper) -> bool:
 	if is_host(user, paper):
 		return True
 	else:
-		if paper.invitingUser.exists():
+		if len(paper.invitingUser.all()) == 0:
 			return False
 
-		if user in paper.invitingUser:
+		if user in paper.invitingUser.all():
 			return True
 		else:
 			return False

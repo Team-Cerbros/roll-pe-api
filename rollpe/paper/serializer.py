@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from paper.models import Paper, QueryIndexTable
+from user.serializers import UserViewSerializer
 
 
 class UserShowPaperSerializer(serializers.ModelSerializer):
@@ -45,9 +46,50 @@ class PaperCreateSerializer(serializers.ModelSerializer):
 
 
 class PaperSerializer(serializers.ModelSerializer):
+	host = serializers.SerializerMethodField()
+	receiver = serializers.SerializerMethodField()
+
+	theme = serializers.SerializerMethodField()
+	size = serializers.SerializerMethodField()
+	ratio = serializers.SerializerMethodField()
+	invitingUser = serializers.SerializerMethodField()
+
 	class Meta:
 		model = Paper
-		exclude = ('id', 'updatedAt', 'password')
+		fields = (
+			'host', 'receiver',
+			'theme', 'size', 'ratio',
+			'viewStat', 'title', 'description', 'invitingUser', 'createdAt'
+		)
+
+	def get_host(self, paper):
+		return UserViewSerializer(paper.hostFK).data
+
+	def get_receiver(self, paper):
+		response = dict()
+
+		response["id"] = UserViewSerializer(paper.receiverFK).data if paper.receiverFK else None
+		response["name"] = paper.receiverFK.name if paper.receiverFK else paper.receiverName
+		response["tel"] = "" if paper.receiverTel else paper.receiverTel
+		response["date"] = paper.receivingDate
+		response["stat"] = paper.receivingStat
+		response["is_user"] = True if paper.receiverFK else False
+
+		return response
+
+	def get_theme(self, paper):
+		return QueryIndexSerializer(paper.themeFK).data
+
+	def get_size(self, paper):
+		return QueryIndexSerializer(paper.sizeFK).data
+
+	def get_ratio(self, paper):
+		return QueryIndexSerializer(paper.ratioFK).data
+
+	def get_invitingUser(self, paper):
+		if not paper.invitingUser:
+			return []
+		return UserViewSerializer(paper.invitingUser.all(), many=True).data
 
 
 

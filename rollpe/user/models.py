@@ -60,7 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseTimeModel):
         # django에서 필요한 필드
         default=False
     )
-    
+
     is_active = models.BooleanField(
         # django에서 필요한 필드
         default=True

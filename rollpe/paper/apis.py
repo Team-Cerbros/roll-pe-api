@@ -1,6 +1,5 @@
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import check_password, make_password
 from rest_framework import status
-from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 
 from paper.serializer import UserShowPaperSerializer, PaperCreateSerializer, PaperSerializer, QueryIndexSerializer, \
@@ -44,6 +43,9 @@ class UserPaperAPI(APIView):
 
 
 	def delete(self, request):
+		"""
+		Paper 삭제
+		"""
 		user = User.objects.get(pk=request.user.id)
 		paper = Paper.objects.get(code=request.data['pcode'])
 
@@ -60,6 +62,9 @@ class UserPaperAPI(APIView):
 
 class PaperAPI(APIView):
 	def get(self, request):
+		"""
+		Paper Detail Info
+		"""
 		pcode = request.query_params.get('pcode', None)
 
 		if pcode is None:
@@ -73,14 +78,13 @@ class PaperAPI(APIView):
 
 		user = User.objects.get(pk=request.user.id)
 		try:
-
 			paper = Paper.objects.get(code=pcode)
+
 		except Paper.DoesNotExist as e:
 			return Response(msg=str(e), status=status.HTTP_404_NOT_FOUND)
 
 		response = PaperSerializer(paper).data
-
-		if is_invited_user(user, paper):
+		if is_invited_user(user=user, paper=paper):
 			return Response(
 				data=response,
 				status=status.HTTP_200_OK
@@ -97,6 +101,140 @@ class PaperAPI(APIView):
 				status=status.HTTP_201_CREATED
 				)
 		return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaperEnterManageAPI(APIView):
+	def post(self, request):
+		pcode = request.data.get('pcode', None)
+
+		if pcode is None:
+			return Response(
+				msg="pcode가 없습니다.",
+				status=status.HTTP_400_BAD_REQUEST
+				)
+
+		if not request.user.is_authenticated:
+			return Response(status=401)
+
+		user = User.objects.get(pk=request.user.id)
+
+		try:
+			paper = Paper.objects.get(code=pcode)
+		except Paper.DoesNotExist as e:
+			return Response(msg=str(e), status=status.HTTP_404_NOT_FOUND)
+
+		request_password = request.data.get('password', None)
+
+		if paper.invitingUser.filter(pk=user.pk).exists():
+			return Response(status=473)
+
+		if paper.viewStat:
+			paper.invitingUser.add(user)
+			return Response(
+				msg="추가 되었습니다.",
+				status=status.HTTP_204_NO_CONTENT
+				)
+		else:
+			if request_password is None:
+				return Response(
+					msg="password가 없습니다.",
+					status=status.HTTP_400_BAD_REQUEST
+					)
+
+			if check_password(request_password, paper.password):
+				paper.invitingUser.add(user)
+				return Response(
+					msg="추가 되었습니다.",
+					status=status.HTTP_204_NO_CONTENT
+					)
+			else:
+				return Response(status=472)
+
+
+
+class PaperPasswordAPI(APIView):
+	def post(self, request):
+		"""
+		Paper Password Change Check
+
+		requirement: pcode, original_password
+		"""
+		pcode = request.data.get('pcode', None)
+		original_password = request.data.get('original_password', None)
+
+		if pcode is None:
+			return Response(
+				msg="pcode가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		if original_password is None:
+			return Response(
+				msg="기존 패스워드가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		paper = Paper.objects.get(code=pcode)
+
+		if not check_password(original_password, paper.password):
+			return Response(
+				msg="기존 비밀번호와 다릅니다.",
+				status=472
+				)
+
+		return Response(status=status.HTTP_200_OK)
+
+
+	def put(self, request):
+		"""
+		Paper Password Change
+
+		Requirement: pcode, original_password, change_password
+		"""
+		pcode = request.data.get('pcode', None)
+		original_password = request.data.get('original_password', None)
+		change_password = request.data.get('change_password', None)
+
+		if pcode is None:
+			return Response(
+				msg="pcode가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		if original_password is None:
+			return Response(
+				msg="기존 패스워드가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		if change_password is None:
+			return Response(
+				msg="변경 패스워드가 필요합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		if original_password == change_password:
+			return Response(
+				msg="변경하려는 패스워드가 기존 패스워드와 일치합니다.",
+				status=status.HTTP_404_NOT_FOUND
+				)
+
+		paper = Paper.objects.get(code=pcode)
+
+		if not check_password(original_password, paper.password):
+			return Response(
+				msg="기존 비밀번호와 다릅니다.",
+				status=472
+				)
+
+		paper.password = make_password(change_password)
+		paper.save()
+
+		return Response(
+			msg="패스워드 변경 성공",
+			status=status.HTTP_204_NO_CONTENT
+			)
+
 
 
 class QueryIndexAPI(APIView):
@@ -126,51 +264,23 @@ class QueryIndexAPI(APIView):
 		return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PaperEnterManageAPI(APIView):
-	def post(self, request):
-		pcode = request.data.get('pcode', None)
-
-		if pcode is None:
-			return Response(
-				msg="pcode가 없습니다.",
-				status=status.HTTP_400_BAD_REQUEST
-				)
-
-		if not request.user.is_authenticated:
-			return Response(status=401)
-
-		user = User.objects.get(pk=request.user.id)
-
-		try:
-			paper = Paper.objects.get(code=pcode)
-		except Paper.DoesNotExist as e:
-			return Response(msg=str(e), status=status.HTTP_404_NOT_FOUND)
-
-		request_password = request.data.get('password', None)
 
 
 
-		if paper.invitingUser.filter(pk=user.pk).exists():
-			return Response(status=473)
 
-		if paper.viewStat:
-			paper.invitingUser.add(user)
-			return Response(
-				msg="추가 되었습니다.",
-				status=status.HTTP_204_NO_CONTENT
-				)
-		else:
-			if request_password is None:
-				return Response(
-					msg="password가 없습니다.",
-					status=status.HTTP_400_BAD_REQUEST
-					)
 
-			if check_password(request_password, paper.password):
-				paper.invitingUser.add(user)
-				return Response(
-					msg="추가 되었습니다.",
-					status=status.HTTP_204_NO_CONTENT
-					)
-			else:
-				return Response(status=472)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
