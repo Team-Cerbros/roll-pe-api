@@ -40,5 +40,8 @@ jobs:
         echo "${{secrets.ENV_FILE}}" > ./.env
         cat ./.env
 
-    
+    - name: Run Django Test
+      run: |
+        python3 manage.py test
 
+        
