@@ -45,7 +45,7 @@ jobs:
 
     - name: Run Django Test - Jeongmingz Part (Paper Application)
       run: |
-        python3 manage.py test app
+        python3 manage.py test paper
       working-directory: ${{ env.project-working-directory }}
 
         
