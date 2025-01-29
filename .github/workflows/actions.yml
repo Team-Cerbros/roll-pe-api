@@ -1,5 +1,5 @@
 name: Django On-demand Server Deploy
-run-name: ${{ github.actor }}
+run-name: ${{ github.actor }} PR 전 Test CI
 
 on:
   push:
