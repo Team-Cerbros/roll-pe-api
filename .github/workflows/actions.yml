@@ -33,5 +33,12 @@ jobs:
       run: |
         pip install -r requirements.txt
 
+    - name: Make .env file
+      run: |
+        cd rollpe
+        touch ./.env
+        echo "${{secrets.ENV_FILE}}" > ./.env
+        cat ./.env
+
     
 
