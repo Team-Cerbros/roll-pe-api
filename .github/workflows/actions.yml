@@ -51,6 +51,7 @@ jobs:
   cd: 
     name: "rollpe Test Server CD"
     needs: ci
+    if: github.event_name == 'push'
     runs-on: ubuntu-22.04
 
     steps:
