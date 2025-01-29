@@ -61,11 +61,13 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
-          command_timeout: 3m
+          script_stop: true
           script: |
-            cd roll-pe-api
+            cd rollpe/roll-pe-api
             git pull origin dev
-            pip3 install -rq requirements.txt
+            cd rollpe
+            source .venv/bin/activate
+            pip3 install -r ../requirements.txt
             sudo systemctl restart gunicorn-app2.service
 
 
