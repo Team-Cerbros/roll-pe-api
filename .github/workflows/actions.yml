@@ -15,6 +15,9 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: ["3.10"]
+    env:
+        project-working-directory: ./rollpe
+
     steps:
     - uses: actions/checkout@v4
 
@@ -35,14 +38,14 @@ jobs:
 
     - name: Make .env file
       run: |
-        cd rollpe
         touch ./.env
         echo "${{secrets.ENV_FILE}}" > ./.env
         cat ./.env
+      working-directory: ${{ env.project-working-directory }}
 
     - name: Run Django Test
       run: |
-        pwd
         python3 manage.py test
+      working-directory: ${{ env.project-working-directory }}
 
         
