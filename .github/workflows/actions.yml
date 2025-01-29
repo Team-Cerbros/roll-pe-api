@@ -43,9 +43,9 @@ jobs:
         cat ./.env
       working-directory: ${{ env.project-working-directory }}
 
-    - name: Run Django Test
+    - name: Run Django Test - Jeongmingz Part (Paper Application)
       run: |
-        python3 manage.py test
+        python3 manage.py test app
       working-directory: ${{ env.project-working-directory }}
 
         
