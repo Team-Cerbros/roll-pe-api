@@ -1,5 +1,5 @@
 name: Django On-demand Server Deploy
-run-name: ${{ github.actor }} PR 전 Test CI
+run-name: roll-pe Backend CI/CD
 
 on:
   push:
@@ -47,5 +47,28 @@ jobs:
       run: |
         python3 manage.py test paper
       working-directory: ${{ env.project-working-directory }}
+      
+  cd: 
+    name: "rollpe Test Server CD"
+    needs: ci
+    runs-on: ubuntu-22.04
 
-        
+    steps:
+      - name: Test Server SSH Connection Test
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          command_timeout: 3m
+          script: |
+            cd roll-pe-api
+            git pull origin dev
+            pip3 install -rq requirements.txt
+            sudo systemctl restart gunicorn-app2.service
+
+
+
+
+          
