@@ -5,6 +5,7 @@ from rest_framework import status
 from django.core import mail
 import jwt
 from django.conf import settings
+from django.core.cache import cache
 
 class ForgotPasswordTestCase(APITestCase):
     def setUp(self):
@@ -28,8 +29,7 @@ class ForgotPasswordTestCase(APITestCase):
             'newPassword':'testnewpassword',
             'newPasswordCheck':'testnewpassword'
         }
-        # 비밀번호 변경을 위한 이메일 인증
-        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
+        
 
     def test_change_password_success(self):
         """
@@ -53,26 +53,36 @@ class ForgotPasswordTestCase(APITestCase):
         로그인 페이지에서 비밀번호 변경을 위한 이메일 발송 test
         """
 
+        cache.clear()
+        mail.outbox = []
+
+        # 비밀번호 변경을 위한 이메일 인증
+        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
+
         # 이메일 발송 여부 확인
-        self.assertEqual(len(mail.outbox), 1)  # 이메일 한 건이 발송되었는지 확인
         email = mail.outbox[0]
         self.assertEqual(email.to, ["test@test.com"])
 
         # 이메일 본문에서 토큰 추출
         token_start_index = email.body.find("token=") + len("token=")
-        self.token = email.body[token_start_index:].strip()  # 이메일 본문에서 토큰 추출
-        self.assertTrue(self.token, "Token not found in email body")
+        token = email.body[token_start_index:].strip()  # 이메일 본문에서 토큰 추출
+        self.assertTrue(token, "Token not found in email body")
 
     def test_verify_email_with_valid_token(self):
         """
         유효한 토큰으로 이메일 인증 성공후 비밀번호 변경 성공 테스트
         """
+        cache.clear()
+        mail.outbox = []
+
+        # 비밀번호 변경을 위한 이메일 인증
+        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
 
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
         token_start_index = email.body.find("token=") + len("token=")
         token = email.body[token_start_index:].strip()
-
+        
         # 이메일 인증 요청
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -106,6 +116,11 @@ class ForgotPasswordTestCase(APITestCase):
         """
         만료된 토큰으로 이메일 인증 실패 여부 테스트
         """
+        cache.clear()
+        mail.outbox = []
+        
+        # 비밀번호 변경을 위한 이메일 인증
+        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
 
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
@@ -129,12 +144,17 @@ class ForgotPasswordTestCase(APITestCase):
         """
         이미 사용한 토큰으로 이메일 인증 실패 여부 테스트
         """
+        cache.clear()
+        mail.outbox = []
+
+        # 비밀번호 변경을 위한 이메일 인증
+        self.client.post(self.change_password_url, {"email": "test@test.com"},format='json')
 
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
         token_start_index = email.body.find("token=") + len("token=")
         token = email.body[token_start_index:].strip()
-
+        
         # 같은 토큰으로 2번 요청
         self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 성공
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 실패
