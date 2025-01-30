@@ -48,7 +48,7 @@ class ForgotPasswordTestCase(APITestCase):
         self.assertIn('access', new_login_response.json().get('data'))
         self.assertIn('refresh', new_login_response.json().get('data'))
 
-    def test_verify_email_with_valid_token(self):
+    def test_send_email_sucess(self):
         """
         로그인 페이지에서 비밀번호 변경을 위한 이메일 발송 test
         """
