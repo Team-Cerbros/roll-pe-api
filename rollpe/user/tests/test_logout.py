@@ -31,7 +31,7 @@ class LogoutAPITest(APITestCase):
         self.login_response = self.client.post(self.login_url, self.sign_in_data)
 
         # 헤더에 토큰 추가
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.login_response.json().get('data').get('access')}')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.login_response.json().get('data').get('access')}")
 
     """리프레시 토큰이 유효할 때 로그아웃 성공"""
     def test_logout_success(self):

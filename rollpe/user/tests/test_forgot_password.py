@@ -21,7 +21,7 @@ class ForgotPasswordTestCase(APITestCase):
         }
         self.login_response = self.client.post(self.login_url, self.sign_in_data)
         # 헤더에 토큰 추가
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.login_response.json().get('data').get('access')}')
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.login_response.json().get('data').get('access')}")
 
         self.change_data = {
             'refresh':self.login_response.json().get('data').get('refresh'),
