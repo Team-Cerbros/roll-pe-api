@@ -65,7 +65,7 @@ jobs:
   cd: 
     name: "rollpe Test Server CD"
     needs: ci
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' and github.repository == 'Team-Exiters/roll-pe-api'
     runs-on: ubuntu-22.04
 
     steps:
