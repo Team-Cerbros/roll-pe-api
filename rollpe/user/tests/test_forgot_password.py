@@ -63,34 +63,34 @@ class ForgotPasswordTestCase(APITestCase):
         self.token = email.body[token_start_index:].strip()  # 이메일 본문에서 토큰 추출
         self.assertTrue(self.token, "Token not found in email body")
 
-    # def test_verify_email_with_valid_token(self):
-    #     """
-    #     유효한 토큰으로 이메일 인증 성공후 비밀번호 변경 성공 테스트
-    #     """
+    def test_verify_email_with_valid_token(self):
+        """
+        유효한 토큰으로 이메일 인증 성공후 비밀번호 변경 성공 테스트
+        """
 
-    #     # 이메일 본문에서 토큰 추출
-    #     email = mail.outbox[0]
-    #     token_start_index = email.body.find("token=") + len("token=")
-    #     token = email.body[token_start_index:].strip()
+        # 이메일 본문에서 토큰 추출
+        email = mail.outbox[0]
+        token_start_index = email.body.find("token=") + len("token=")
+        token = email.body[token_start_index:].strip()
 
-    #     # 이메일 인증 요청
-    #     response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}")
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.json()["message"], "이메일 인증이 완료되었습니다.")
+        # 이메일 인증 요청
+        response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["message"], "이메일 인증이 완료되었습니다.")
 
-    #     # 비밀변호 변경 요청
-    #     response = self.client.patch(self.change_password_url, self.change_data)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(response.json()['message'], "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
+        # 비밀변호 변경 요청
+        response = self.client.patch(self.change_password_url, self.change_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['message'], "비밀번호 변경이 완료되었습니다. 다시 로그인해주세요.")
 
-    #     # 비밀번호 변경후 로그아웃 시키기
-    #     self.client.post(self.logout_url, {"refresh": self.login_response.json().get('data').get('refresh')})
+        # 비밀번호 변경후 로그아웃 시키기
+        self.client.post(self.logout_url, {"refresh": self.login_response.json().get('data').get('refresh')})
 
-    #     # 변경된 비밀번호로 로그인 시도
-    #     new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
-    #     self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
-    #     self.assertIn('access', new_login_response.json().get('data'))
-    #     self.assertIn('refresh', new_login_response.json().get('data'))
+        # 변경된 비밀번호로 로그인 시도
+        new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
+        self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', new_login_response.json().get('data'))
+        self.assertIn('refresh', new_login_response.json().get('data'))
 
     def test_verify_email_with_invalid_token(self):
         """
