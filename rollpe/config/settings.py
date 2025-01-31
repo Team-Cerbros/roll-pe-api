@@ -91,6 +91,7 @@ DATABASES = {
         'HOST': return_env_value('DJANGO_DATABASE_HOST'),
         'PORT': return_env_value('DJANGO_DATABASE_PORT'),
         'TEST': {
+            'ENGINE': 'django.db.backends.sqlite3',
             'NAME': 'test_' + return_env_value('DJANGO_DATABASE_NAME'),  # 테스트용 DB 이름
         },
     }
