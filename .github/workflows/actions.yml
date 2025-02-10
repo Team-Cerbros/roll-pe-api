@@ -38,9 +38,8 @@ jobs:
 
     - name: Make .env file
       run: |
-        touch ./.env
-        echo "${{ secrets.ENV_FILE }}" > ./.env
-        cat ./.env
+        echo "${{ secrets.ENV_FILE }}" | base64 --decode > .env
+        cat .env
       working-directory: ${{ env.project-working-directory }}
 
     - name: Run Django Test - Jeongmingz Part (Paper Application)
