@@ -61,7 +61,7 @@ class BaseTestSetup(APITestCase):
             description='테스트 입니다.',
             viewStat=True,
             themeFK=theme,
-            sizeFk=size,
+            sizeFK=size,
             ratioFK=ratio
         )
         
@@ -75,7 +75,7 @@ class BaseTestSetup(APITestCase):
             password='1234',
             viewStat=False,
             themeFK=theme,
-            sizeFk=size,
+            sizeFK=size,
             ratioFK=ratio
         )
         
