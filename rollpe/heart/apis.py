@@ -5,7 +5,7 @@ from django.utils.timezone import localtime, now, make_aware
 from datetime import datetime, time, timedelta
 
 from utils.response import Response
-from utils.share.functions import is_only_invited_user, is_valid_uuid
+from utils.share.functions import is_only_invited_user, is_valid_uuid, is_host
 from paper.models import Paper
 from heart.models import Heart
 from heart.serializers import HeartReadSerializer, HeartWriteSerializer
@@ -154,18 +154,18 @@ class HeartAPI(APIView):
         if not request.user.is_authenticated:
             return Response(status=401)
         
-        if not request.user.is_staff:
-            return Response(status=484)
-        
         hcode = request.GET.get('hcode')
         
         if not is_valid_uuid(hcode):
             return Response(status=404)
-            
+        
         try:
             heart_instance = Heart.objects.get(code=hcode)
         except Heart.DoesNotExist:
             return Response(status=404)
+        
+        if not is_host(request.user, heart_instance.paperFK):
+            return Response(status=470)
         
         heart_instance.delete()
         
@@ -174,8 +174,6 @@ class HeartAPI(APIView):
 
 @api_view(['GET'])
 def get_my_heart_list(request):
-    
-    """"""
     
     if not request.user.is_authenticated:
             return Response(status=401)
