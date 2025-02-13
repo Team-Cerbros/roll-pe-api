@@ -174,7 +174,6 @@ class HeartAPI(APIView):
 
 @api_view(['GET'])
 def get_my_heart_list(request):
-    """"""
     if not request.user.is_authenticated:
             return Response(status=401)
 
