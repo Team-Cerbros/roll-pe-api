@@ -4,8 +4,6 @@ run-name: roll-pe Backend CI/CD - ${{ github.actor }}
 on:
   push:
     branches: "dev"
-  pull_request:
-    branches: "dev"
 
 jobs:
   ci:
