@@ -39,10 +39,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         tokens = super().validate(attrs)
 
         # 추가 사용자 정보 포함 (선택)
-        # tokens["user"] = {
-        #     "id": user.id,
-        #     "email": user.email,
-        # }
+        tokens["user"] = {
+            "name": user_instance.name,
+            "email": user_instance.email,
+        }
 
         return Response(data=tokens, status=200)
 
