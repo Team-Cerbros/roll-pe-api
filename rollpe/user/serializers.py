@@ -12,18 +12,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         email = attrs.get("email")
         password = attrs.get("password")
 
+        user_instance = User.objects.filter(email=email).first()
+
         # 이메일 존재 여부 확인
-        if not User.objects.filter(email=email).exists():
+        if not user_instance:
             return Response(
                 msg="사용자를 찾을 수 없습니다.",
                 status=400
             )
 
         # 비밀번호 확인
-        user = authenticate(email=email, password=password)
-        if user is None:
+        # user = authenticate(email=email, password=password)
+        if not user_instance.check_password(password):
             return Response(
                 msg="비밀번호가 틀렸습니다.",
+                status=400
+            )
+
+        if not user_instance.is_active:
+            return Response(
+                msg="이메일 인증을 진행해주세요.",
                 status=400
             )
 

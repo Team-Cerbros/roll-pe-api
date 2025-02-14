@@ -91,7 +91,7 @@ class VerifyEmailAPI(APIView):
         # domain = settings.REDIRECT_DOMAIN
 
         token = request.GET.get("token")
-        path_code = request.GET.get("pathCode")
+        path_code = request.GET.get("path_code")
         if not token:
             return Response(msg="토큰이 필요합니다.", status=400)
 
