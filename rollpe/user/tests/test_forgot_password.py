@@ -85,8 +85,8 @@ class ForgotPasswordTestCase(APITestCase):
         
         # 이메일 인증 요청
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["message"], "이메일 인증이 완료되었습니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("이메일 인증이 완료되었습니다.", html)
 
         # 비밀변호 변경 요청
         response = self.client.patch(self.change_password_url, self.change_data)
@@ -109,8 +109,8 @@ class ForgotPasswordTestCase(APITestCase):
         # 잘못된 토큰으로 요청
         invalid_token = jwt.encode({"email": "test@test.com"}, "wrong_secret", algorithm="HS256")
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={invalid_token}")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "유효하지 않은 토큰입니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("유효하지 않은 링크입니다. 재전송 버튼을 눌러주세요.", html)
 
     def test_verify_email_with_expired_token(self):
         """
@@ -137,8 +137,8 @@ class ForgotPasswordTestCase(APITestCase):
 
         # 만료된 토큰으로 요청
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={expired_token}")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "토큰이 만료되었습니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("링크가 만료되었습니다. 재전송 버튼을 눌러주세요.", html)
     
     def test_verify_email_with_used_token(self):
         """
@@ -158,6 +158,6 @@ class ForgotPasswordTestCase(APITestCase):
         # 같은 토큰으로 2번 요청
         self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 성공
         response = self.client.get(f"{self.verify_email_url}?pathCode=password&token={token}") # 실패
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "이미 사용된 토큰입니다.") 
+        html = response.content.decode('utf-8')
+        self.assertIn("이미 인증된 링크입니다.", html)
 

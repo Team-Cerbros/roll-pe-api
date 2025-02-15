@@ -26,17 +26,21 @@ class EmailVerificationTest(APITestCase):
             "phoneNumber": "01012345678"
         }
 
-        # 회원가입 
-        self.signup_response = self.client.post(self.signup_url, self.user_data, format='json')
-
     def test_signup_sends_email_with_token(self):
         """
         회원가입 시 이메일 인증 링크가 전송되는지 테스트
         """
+
+        cache.clear()
+        mail.outbox = []
+
+        # 회원가입 
+        signup_response = self.client.post(self.signup_url, self.user_data, format='json')
+
         # 응답 코드 확인
-        self.assertEqual(self.signup_response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("message", self.signup_response.json())
-        self.assertEqual(self.signup_response.json()["message"], "회원가입이 완료되었습니다. 이메일을 확인해주세요.")
+        self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("message", signup_response.json())
+        self.assertEqual(signup_response.json()["message"], "회원가입이 완료되었습니다. 이메일을 확인해주세요.")
 
         # 이메일 발송 여부 확인
         self.assertEqual(len(mail.outbox), 1)  # 이메일 한 건이 발송되었는지 확인
@@ -53,15 +57,21 @@ class EmailVerificationTest(APITestCase):
         유효한 토큰으로 이메일 인증 성공 여부 테스트
         """
 
+        cache.clear()
+        mail.outbox = []
+
+        # 회원가입 
+        self.client.post(self.signup_url, self.user_data, format='json')
+
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
         token_start_index = email.body.find("token=") + len("token=")
         token = email.body[token_start_index:].strip()
 
         # 이메일 인증 요청
-        response = self.client.get(f"{self.verify_email_url}?pathCode=email&token={token}")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["message"], "이메일 인증이 완료되었습니다.")
+        response = self.client.get(f"{self.verify_email_url}?path_code=email&token={token}")
+        html = response.content.decode('utf-8')
+        self.assertIn("이메일 인증이 완료되었습니다.", html)
 
         # 사용자 인증 여부 확인
         user = User.objects.get(email=self.user_data["email"])
@@ -72,16 +82,28 @@ class EmailVerificationTest(APITestCase):
         잘못된 토큰으로 이메일 인증 실패 여부 테스트
         """
 
+        cache.clear()
+        mail.outbox = []
+
+        # 회원가입 
+        self.client.post(self.signup_url, self.user_data, format='json')
+
         # 잘못된 토큰으로 요청
         invalid_token = jwt.encode({"email": self.user_data.get('email')}, "wrong_secret", algorithm="HS256")
         response = self.client.get(f"{self.verify_email_url}?pathCode=email&token={invalid_token}")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "유효하지 않은 토큰입니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("유효하지 않은 링크입니다. 재전송 버튼을 눌러주세요.", html)
 
     def test_verify_email_with_expired_token(self):
         """
         만료된 토큰으로 이메일 인증 실패 여부 테스트
         """
+
+        cache.clear()
+        mail.outbox = []
+
+        # 회원가입 
+        self.client.post(self.signup_url, self.user_data, format='json')
 
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
@@ -98,13 +120,19 @@ class EmailVerificationTest(APITestCase):
 
         # 만료된 토큰으로 요청
         response = self.client.get(f"{self.verify_email_url}?pathCode=email&token={expired_token}")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "토큰이 만료되었습니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("링크가 만료되었습니다. 재전송 버튼을 눌러주세요.", html)
     
     def test_verify_email_with_used_token(self):
         """
         이미 사용한 토큰으로 이메일 인증 실패 여부 테스트
         """
+
+        cache.clear()
+        mail.outbox = []
+
+        # 회원가입 
+        self.client.post(self.signup_url, self.user_data, format='json')
 
         # 이메일 본문에서 토큰 추출
         email = mail.outbox[0]
@@ -114,7 +142,7 @@ class EmailVerificationTest(APITestCase):
         # 같은 토큰으로 2번 요청
         self.client.get(f"{self.verify_email_url}?pathCode=email&token={token}") # 성공
         response = self.client.get(f"{self.verify_email_url}?pathCode=email&token={token}") # 실패
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["message"], "이미 사용된 토큰입니다.")
+        html = response.content.decode('utf-8')
+        self.assertIn("이미 인증된 링크입니다.", html)
 
 
