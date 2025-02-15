@@ -19,7 +19,6 @@ from user.models import User
 from paper.models import Paper
 
 class CustomTokenObtainPairAPI(TokenObtainPairView):
-
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -27,7 +26,6 @@ class CustomTokenObtainPairAPI(TokenObtainPairView):
         serializer = CustomTokenObtainPairSerializer(data=request.data)
 
         if serializer.is_valid():
-
             response_data = serializer.validated_data
             
             return response_data  # Response 내부에서 반환된 값을 그대로 전달

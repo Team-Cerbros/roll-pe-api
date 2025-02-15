@@ -28,7 +28,7 @@ class LoginAPITestCase(APITestCase):
     def test_signin_success(self):
         """ 로그인 성공 """
         response = self.client.post(self.login_url, self.login_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('access', response.json().get('data'))
         self.assertIn('refresh', response.json().get('data'))
 

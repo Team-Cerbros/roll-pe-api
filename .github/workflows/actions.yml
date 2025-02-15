@@ -41,7 +41,7 @@ jobs:
       working-directory: ${{ env.project-working-directory }}
 
     - name: Run Django Test - Jeongmingz Part (Paper Application)
-      if: github.actor == 'jeongmingz' && github.reqository == 'jeongmingz/roll-pe-api'
+      if: github.actor == 'Jeongmingz' && github.reqository == 'Jeongmingz/roll-pe-api'
       run: |
         python3 manage.py test paper
       working-directory: ${{ env.project-working-directory }}
