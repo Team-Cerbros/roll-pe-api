@@ -3,10 +3,11 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.views import APIView
 from rest_framework import permissions
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.conf import settings
 
 from utils.response import Response
@@ -84,14 +85,17 @@ def signup_api(request):
 # 비밀번호 찾기 이메일 인증시
 class VerifyEmailAPI(APIView):
 
+
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'success_email_auth.html'
 
     def get(self, request):
-
-        # domain = settings.REDIRECT_DOMAIN
+        from rest_framework.response import Response as djangoResponse
 
         token = request.GET.get("token")
-        path_code = request.GET.get("pathCode")
+        path_code = request.GET.get("path_code")
+
         if not token:
             return Response(msg="토큰이 필요합니다.", status=400)
 
@@ -104,21 +108,20 @@ class VerifyEmailAPI(APIView):
             match path_code:
 
                 case "email":
-                    # redirect_url = ""
-                    user = User.objects.get(email=user_email)
+                    user = get_object_or_404(User, email=user_email)
                     user.is_active = True
                     user.save()
                     
                 case "password":
-                    # redirect_url = ""
+                    
                     pass
 
             # return redirect(redirect_url)
-            return Response(msg="이메일 인증이 완료되었습니다.", status=200)
+            return djangoResponse({"msg": "이메일 인증이 완료되었습니다."})
         
         except ValueError as e:
-
-            return Response(msg=str(e), status=400)
+            # return Response(msg=str(e), status=400)
+            return djangoResponse({"msg": str(e)})
     
     def patch(self, request):
         email = request.data["email"]

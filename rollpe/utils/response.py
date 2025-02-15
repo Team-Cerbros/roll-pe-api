@@ -21,7 +21,13 @@ class CustomResponse(JsonResponse):
 			"data": data,
 			}
 
-		super().__init__(payload, status=http_status, **kwargs)
+		super().__init__(
+            payload, 
+            status=http_status, 
+            json_dumps_params={'ensure_ascii': False},
+            charset='utf-8',
+            **kwargs
+        )
 
 	def set_cookie(self, key, value, **options):
 		"""
