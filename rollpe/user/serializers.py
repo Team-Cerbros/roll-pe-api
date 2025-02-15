@@ -44,7 +44,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             "email": user_instance.email,
         }
 
-        return Response(data=tokens, status=200)
+        return Response(data=tokens, status=201)
 
 class UserSerializer(serializers.ModelSerializer):
 
