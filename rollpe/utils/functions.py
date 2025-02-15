@@ -22,16 +22,16 @@ def verify_email_token(token):
         used_token = cache.get(f'{payload["email"]}_token', None)
 
         if used_token:
-            raise ValueError("이미 사용된 토큰입니다.")
+            raise ValueError("이미 인증된 링크입니다.")
         
         cache.set(f'{payload["email"]}_token',token, timeout=300)
 
         return payload  # 유효한 경우 페이로드 반환
     
     except jwt.ExpiredSignatureError:
-        raise ValueError("토큰이 만료되었습니다.")
+        raise ValueError("링크가 만료되었습니다. 재전송 버튼을 눌러주세요.")
     except jwt.InvalidTokenError:
-        raise ValueError("유효하지 않은 토큰입니다.") 
+        raise ValueError("유효하지 않은 링크입니다. 재전송 버튼을 눌러주세요.") 
 
 def generate_send_email(request, email, path_code):
     token = generate_email_verification_token(email)
