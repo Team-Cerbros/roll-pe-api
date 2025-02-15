@@ -44,7 +44,7 @@ class ForgotPasswordTestCase(APITestCase):
 
         # 변경된 비밀번호로 로그인 시도
         new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
-        self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(new_login_response.status_code, status.HTTP_201_CREATED)
         self.assertIn('access', new_login_response.json().get('data'))
         self.assertIn('refresh', new_login_response.json().get('data'))
 
@@ -98,7 +98,7 @@ class ForgotPasswordTestCase(APITestCase):
 
         # 변경된 비밀번호로 로그인 시도
         new_login_response = self.client.post(self.login_url, {'email':self.sign_in_data.get('email'), 'password':self.change_data.get('newPassword')})
-        self.assertEqual(new_login_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(new_login_response.status_code, status.HTTP_201_CREATED)
         self.assertIn('access', new_login_response.json().get('data'))
         self.assertIn('refresh', new_login_response.json().get('data'))
 
